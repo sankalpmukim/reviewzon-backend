@@ -1,3 +1,4 @@
+from lxml.html import fromstring
 from selectorlib import Extractor
 import requests
 import json
@@ -7,6 +8,24 @@ from dateutil import parser as dateparser
 
 # Create an Extractor by reading from the YAML file
 e = Extractor.from_yaml_file('selectors.yml')
+
+
+def get_proxies():
+    url = 'https://free-proxy-list.net/'
+    response = requests.get(url)
+    parser = fromstring(response.text)
+    proxies = set()
+    for i in parser.xpath('//tbody/tr')[:10]:
+        if i.xpath('.//td[7][contains(text(),"yes")]'):
+            # Grabbing IP and corresponding PORT
+            proxy = ":".join([i.xpath('.//td[1]/text()')[0],
+                              i.xpath('.//td[2]/text()')[0]])
+            proxies.add(proxy)
+    return proxies
+
+
+proxies = get_proxies()
+count = 0
 
 
 def scrape(url):
@@ -26,7 +45,11 @@ def scrape(url):
 
     # Download the page using requests
     print("Downloading %s" % url)
-    r = requests.get(url, headers=headers)
+    global count
+    print(list(proxies)[count])
+    r = requests.get(url, headers=headers, proxies={"http": "http://"+list(
+        proxies)[count], "https": "https://"+list(proxies)[count]})
+    count += 1
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
         if "To discuss automated access to Amazon data please contact" in r.text:
@@ -36,21 +59,32 @@ def scrape(url):
             print("Page %s must have been blocked by Amazon as the status code was %d" % (
                 url, r.status_code))
         return None
+    print(r.content)
     # Pass the HTML of the page and create
     return e.extract(r.text)
 
 
-# product_data = []
-with open("urls.txt", 'r') as urllist, open('data.csv', 'w', encoding="utf-8") as outfile:
+baseurl = input()
+split = baseurl.split('/')
+print(split)
+reviewurl = split[0]+"//"+split[2]+"/"+split[3]+"/"+"product-reviews"+"/" + \
+    split[5]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+reviewurl = "https://www.amazon.in/OJOS-Silicone-Compatible-Generation-Protective/product-reviews/B07Y5N98KS/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews"
+
+with open('data.csv', 'w', encoding="utf-8") as outfile:
     writer = csv.DictWriter(outfile, fieldnames=["title", "content", "date", "variant",
                                                  "images", "verified", "author", "rating", "product", "url"], quoting=csv.QUOTE_ALL)
     writer.writeheader()
-    for url in urllist.readlines():
-        data = scrape(url)
+    count = 0
+    while reviewurl != None:
+        data = scrape(reviewurl)
         if data:
+            print(data)
+            print(count)
+            count += 1
             for r in data['reviews']:
                 r["product"] = data["product_title"]
-                r['url'] = url
+                r['url'] = reviewurl
                 if 'verified' in r:
                     if 'Verified Purchase' in r['verified']:
                         r['verified'] = 'Yes'
@@ -62,4 +96,7 @@ with open("urls.txt", 'r') as urllist, open('data.csv', 'w', encoding="utf-8") a
                     r['images'] = "\n".join(r['images'])
                 r['date'] = dateparser.parse(date_posted).strftime('%d %b %Y')
                 writer.writerow(r)
-            # sleep(5)
+            sleep(5)
+            reviewurl = split[0]+"//"+split[2]+data["next_page"]
+        else:
+            break

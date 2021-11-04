@@ -7,6 +7,7 @@ from itertools import cycle
 from scipy import interp
 import pandas as pd
 import numpy as np
+from scipy.sparse import csr_matrix
 
 
 # NLTK libraries
@@ -63,7 +64,7 @@ warnings.filterwarnings('ignore')
 # Other miscellaneous libraries
 
 
-def preprocessing():
+def preprocessing_data():
     raw_reviews = pd.read_csv('Musical_instruments_reviews.csv')
     # print shape of dataset with rows and columns and information
     print("The shape of the  data is (row, column):" + str(raw_reviews.shape))
@@ -267,36 +268,28 @@ def data_visualization(process_reviews):
     cf.go_offline()
     cf.set_config_file(offline=False, world_readable=True)
 
-    process_reviews['polarity'].iplot(
+    process_reviews['polarity'].plot(
         kind='hist',
         bins=50,
-        xTitle='polarity',
-        linecolor='black',
-        yTitle='count',
         title='Sentiment Polarity Distribution')
+    plt.show()
 
-    process_reviews['overall'].iplot(
+    process_reviews['overall'].plot(
         kind='hist',
-        xTitle='rating',
-        linecolor='black',
-        yTitle='count',
         title='Review Rating Distribution')
+    plt.show()
 
-    process_reviews['review_len'].iplot(
+    process_reviews['review_len'].plot(
         kind='hist',
         bins=100,
-        xTitle='review length',
-        linecolor='black',
-        yTitle='count',
         title='Review Text Length Distribution')
+    plt.show()
 
-    process_reviews['word_count'].iplot(
+    process_reviews['word_count'].plot(
         kind='hist',
         bins=100,
-        xTitle='word count',
-        linecolor='black',
-        yTitle='count',
         title='Review Text Word Count Distribution')
+    plt.show()
 
     # Filtering data
     review_pos = process_reviews[process_reviews["sentiment"]
@@ -371,5 +364,130 @@ def data_visualization(process_reviews):
     iplot(fig, filename='word-plots')
 
 
-cleaned_data = preprocessing()
+def feature_extraction(process_reviews):
+    # calling the label encoder function
+    label_encoder = preprocessing.LabelEncoder()
+
+    # Encode labels in column 'sentiment'.
+    process_reviews['sentiment'] = label_encoder.fit_transform(
+        process_reviews['sentiment'])
+    # Extracting 'reviews' for processing
+    review_features = process_reviews.copy()
+    review_features = review_features[['reviews']].reset_index(drop=True)
+
+    # Performing stemming on the review dataframe
+    ps = PorterStemmer()
+    stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
+                  'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
+                  'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
+                  'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
+                  'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
+                  'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
+                  'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
+                  'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
+                  'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
+                  'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
+                  'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
+    # splitting and adding the stemmed words except stopwords
+    corpus = []
+    for i in range(0, len(review_features)):
+        review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+        review = review.split()
+        review = [ps.stem(word) for word in review if not word in stop_words]
+        review = ' '.join(review)
+        corpus.append(review)
+
+    tfidf_vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(2, 2))
+    # TF-IDF feature matrix
+    X = tfidf_vectorizer.fit_transform(review_features['reviews'])
+
+    # Getting the target variable(encoded)
+    y = process_reviews['sentiment']
+
+    print(f'Original dataset shape : {Counter(y)}')
+
+    smote = SMOTE(random_state=42)
+    X_res, y_res = smote.fit_resample(X, y)
+
+    print(f'Resampled dataset shape {Counter(y_res)}')
+
+    # Divide the dataset into Train and Test
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_res, y_res, test_size=0.25, random_state=0)
+
+    def plot_confusion_matrix(cm, classes,
+                              normalize=False,
+                              title='Confusion matrix',
+                              cmap=plt.cm.Blues):
+        """
+        This function prints and plots the confusion matrix.
+        Normalization can be applied by setting `normalize=True`.
+        """
+
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+
+        if normalize:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+            print("Normalized confusion matrix")
+        else:
+            print('Confusion matrix, without normalization')
+
+        thresh = cm.max() / 2.
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                plt.text(j, i, cm[i, j],
+                         horizontalalignment="center",
+                         color="white" if cm[i, j] > thresh else "black")
+
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.show()
+
+    # creating the objects
+    logreg_cv = LogisticRegression(random_state=0)
+    dt_cv = DecisionTreeClassifier()
+    knn_cv = KNeighborsClassifier()
+    svc_cv = SVC()
+    nb_cv = BernoulliNB()
+    cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
+               2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
+    cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
+
+    for i, model in enumerate(cv_models):
+        print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
+            model, X, y, cv=10, scoring='accuracy').mean()))
+
+    param_grid = {'C': np.logspace(-4, 4, 50),
+                  'penalty': ['l1', 'l2']}
+    clf = GridSearchCV(LogisticRegression(random_state=0),
+                       param_grid, cv=5, verbose=0, n_jobs=-1)
+    best_model = clf.fit(X_train, y_train)
+    print(best_model.best_estimator_)
+    print("The mean accuracy of the model is:",
+          best_model.score(X_test, y_test))
+
+    logreg = LogisticRegression(C=10000.0, random_state=0)
+    logreg.fit(X_train, y_train)
+    y_pred = logreg.predict(X_test)
+    print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+        logreg.score(X_test, y_test)))
+
+    logreg = LogisticRegression(C=10000.0, random_state=0)
+    logreg.fit(X_train, y_train)
+    y_pred = logreg.predict(X_test)
+    print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+        logreg.score(X_test, y_test)))
+
+    cm = metrics.confusion_matrix(y_test, y_pred)
+    plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
+
+
+cleaned_data = preprocessing_data()
 data_visualization(cleaned_data)
+feature_extraction(cleaned_data)

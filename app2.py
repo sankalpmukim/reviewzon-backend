@@ -46,7 +46,7 @@ import seaborn as sns
 from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
-from plotly.offline import iplot
+from plotly.offline import plot
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -59,6 +59,7 @@ class SentimentAnalysis:
         self.raw_reviews = pd.read_csv(file_path)
         self.preprocessing_data()
         print(self.process_reviews.info())
+        self.data_visualization()
 
     def preprocessing_data(self) -> None:
         # Preprocessing the data
@@ -202,152 +203,161 @@ class SentimentAnalysis:
         self.process_reviews['reviews'] = self.process_reviews['reviews'].apply(
             lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 
-    # def data_visualization(process_reviews):
-    #     print(pd.DataFrame(process_reviews.groupby(
-    #         'sentiment')['helpful_rate'].mean()))
+    def data_visualization(self) -> None:
 
-    #     # plot layout
-    #     plt.rcParams.update({'font.size': 18})
-    #     rcParams['figure.figsize'] = 16, 9
+        # plot layout
+        plt.rcParams.update({'font.size': 18})
+        rcParams['figure.figsize'] = 16, 9
 
-    #     # Creating dataframe and removing 0 helpfulrate records
-    #     senti_help = pd.DataFrame(process_reviews, columns=[
-    #         'sentiment', 'helpful_rate'])
-    #     senti_help = senti_help[senti_help['helpful_rate'] != 0.00]
+        # Creating dataframe and removing 0 helpfulrate records
+        senti_help = pd.DataFrame(self.process_reviews, columns=[
+            'sentiment', 'helpful_rate'])
+        senti_help = senti_help[senti_help['helpful_rate'] != 0.00]
 
-    #     # Plotting phase
-    #     sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
-    #     plt.title('Sentiment vs Helpfulness')
-    #     plt.xlabel('Sentiment categories')
-    #     plt.ylabel('helpful rate')
-    #     plt.show()
+        # Plotting phase
+        sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
+        plt.title('Sentiment vs Helpfulness')
+        plt.xlabel('Sentiment categories')
+        plt.ylabel('helpful rate')
+        plt.savefig('images/sentiment_helpful_rate.png')
+        plt.clf()
 
-    #     process_reviews.groupby(['year', 'sentiment'])[
-    #         'sentiment'].count().unstack().plot(legend=True)
-    #     plt.title('Year and Sentiment count')
-    #     plt.xlabel('Year')
-    #     plt.ylabel('Sentiment count')
-    #     plt.show()
+        self.process_reviews.groupby(['year', 'sentiment'])[
+            'sentiment'].count().unstack().plot(legend=True)
+        plt.title('Year and Sentiment count')
+        plt.xlabel('Year')
+        plt.ylabel('Sentiment count')
+        plt.savefig('images/year_sentiment_count.png')
+        plt.clf()
 
-    #     # Creating a dataframe
-    #     day = pd.DataFrame(process_reviews.groupby(
-    #         'day')['reviews'].count()).reset_index()
-    #     day['day'] = day['day'].astype('int64')
-    #     day.sort_values(by=['day'])
+        # Creating a dataframe
+        day = pd.DataFrame(self.process_reviews.groupby(
+            'day')['reviews'].count()).reset_index()
+        day['day'] = day['day'].astype('int64')
+        day.sort_values(by=['day'])
 
-    #     # Plotting the graph
-    #     sns.barplot(x="day", y="reviews", data=day)
-    #     plt.title('Day vs Reviews count')
-    #     plt.xlabel('Day')
-    #     plt.ylabel('Reviews count')
-    #     plt.show()
+        # Plotting the graph
+        sns.barplot(x="day", y="reviews", data=day)
+        plt.title('Day vs Reviews count')
+        plt.xlabel('Day')
+        plt.ylabel('Reviews count')
+        plt.savefig('images/day_reviews_count.png')
+        plt.clf()
 
-    #     process_reviews['polarity'] = process_reviews['reviews'].map(
-    #         lambda text: TextBlob(text).sentiment.polarity)
-    #     process_reviews['review_len'] = process_reviews['reviews'].astype(
-    #         str).apply(len)
-    #     process_reviews['word_count'] = process_reviews['reviews'].apply(
-    #         lambda x: len(str(x).split()))
+        self.process_reviews['polarity'] = self.process_reviews['reviews'].map(
+            lambda text: TextBlob(text).sentiment.polarity)
+        self.process_reviews['review_len'] = self.process_reviews['reviews'].astype(
+            str).apply(len)
+        self.process_reviews['word_count'] = self.process_reviews['reviews'].apply(
+            lambda x: len(str(x).split()))
 
-    #     print(process_reviews.head())
+        cf.go_offline()
+        cf.set_config_file(offline=False, world_readable=True)
 
-    #     cf.go_offline()
-    #     cf.set_config_file(offline=False, world_readable=True)
+        self.process_reviews['polarity'].plot(
+            kind='hist',
+            bins=50,
+            title='Sentiment Polarity Distribution')
+        plt.savefig('images/polarity_distribution.png')
+        plt.clf()
 
-    #     process_reviews['polarity'].plot(
-    #         kind='hist',
-    #         bins=50,
-    #         title='Sentiment Polarity Distribution')
-    #     plt.show()
+        self.process_reviews['overall'].plot(
+            kind='hist',
+            title='Review Rating Distribution')
+        plt.savefig('images/rating_distribution.png')
+        plt.clf()
 
-    #     process_reviews['overall'].plot(
-    #         kind='hist',
-    #         title='Review Rating Distribution')
-    #     plt.show()
+        self.process_reviews['review_len'].plot(
+            kind='hist',
+            bins=100,
+            title='Review Text Length Distribution')
+        plt.savefig('images/review_len_distribution.png')
+        plt.clf()
 
-    #     process_reviews['review_len'].plot(
-    #         kind='hist',
-    #         bins=100,
-    #         title='Review Text Length Distribution')
-    #     plt.show()
+        self.process_reviews['word_count'].plot(
+            kind='hist',
+            bins=100,
+            title='Review Text Word Count Distribution')
+        plt.savefig('images/review_word_count_distribution.png')
+        plt.clf()
 
-    #     process_reviews['word_count'].plot(
-    #         kind='hist',
-    #         bins=100,
-    #         title='Review Text Word Count Distribution')
-    #     plt.show()
+        # Filtering data
+        review_pos = self.process_reviews[self.process_reviews["sentiment"]
+                                          == 'Positive'].dropna()
+        review_neu = self.process_reviews[self.process_reviews["sentiment"]
+                                          == 'Neutral'].dropna()
+        review_neg = self.process_reviews[self.process_reviews["sentiment"]
+                                          == 'Negative'].dropna()
 
-    #     # Filtering data
-    #     review_pos = process_reviews[process_reviews["sentiment"]
-    #                                  == 'Positive'].dropna()
-    #     review_neu = process_reviews[process_reviews["sentiment"]
-    #                                  == 'Neutral'].dropna()
-    #     review_neg = process_reviews[process_reviews["sentiment"]
-    #                                  == 'Negative'].dropna()
+        ## custom function for ngram generation ##
 
-    #     ## custom function for ngram generation ##
+        def generate_ngrams(text, n_gram=1):
+            token = [token for token in text.lower().split(
+                " ") if token != "" if token not in STOPWORDS]
+            ngrams = zip(*[token[i:] for i in range(n_gram)])
+            return [" ".join(ngram) for ngram in ngrams]
 
-    #     def generate_ngrams(text, n_gram=1):
-    #         token = [token for token in text.lower().split(
-    #             " ") if token != "" if token not in STOPWORDS]
-    #         ngrams = zip(*[token[i:] for i in range(n_gram)])
-    #         return [" ".join(ngram) for ngram in ngrams]
+        ## custom function for horizontal bar chart ##
 
-    #     ## custom function for horizontal bar chart ##
+        def horizontal_bar_chart(df, color):
+            trace = go.Bar(
+                y=df["word"].values[::-1],
+                x=df["wordcount"].values[::-1],
+                showlegend=False,
+                orientation='h',
+                marker=dict(
+                    color=color,
+                ),
+            )
+            return trace
 
-    #     def horizontal_bar_chart(df, color):
-    #         trace = go.Bar(
-    #             y=df["word"].values[::-1],
-    #             x=df["wordcount"].values[::-1],
-    #             showlegend=False,
-    #             orientation='h',
-    #             marker=dict(
-    #                 color=color,
-    #             ),
-    #         )
-    #         return trace
+        ## Get the bar chart from positive reviews ##
+        freq_dict = defaultdict(int)
+        for sent in review_pos["reviews"]:
+            for word in generate_ngrams(sent):
+                freq_dict[word] += 1
+        fd_sorted = pd.DataFrame(
+            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+        fd_sorted.columns = ["word", "wordcount"]
+        trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
 
-    #     ## Get the bar chart from positive reviews ##
-    #     freq_dict = defaultdict(int)
-    #     for sent in review_pos["reviews"]:
-    #         for word in generate_ngrams(sent):
-    #             freq_dict[word] += 1
-    #     fd_sorted = pd.DataFrame(
-    #         sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-    #     fd_sorted.columns = ["word", "wordcount"]
-    #     trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
+        ## Get the bar chart from neutral reviews ##
+        freq_dict = defaultdict(int)
+        for sent in review_neu["reviews"]:
+            for word in generate_ngrams(sent):
+                freq_dict[word] += 1
+        fd_sorted = pd.DataFrame(
+            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+        fd_sorted.columns = ["word", "wordcount"]
+        trace1 = horizontal_bar_chart(fd_sorted.head(25), 'grey')
 
-    #     ## Get the bar chart from neutral reviews ##
-    #     freq_dict = defaultdict(int)
-    #     for sent in review_neu["reviews"]:
-    #         for word in generate_ngrams(sent):
-    #             freq_dict[word] += 1
-    #     fd_sorted = pd.DataFrame(
-    #         sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-    #     fd_sorted.columns = ["word", "wordcount"]
-    #     trace1 = horizontal_bar_chart(fd_sorted.head(25), 'grey')
+        ## Get the bar chart from negative reviews ##
+        freq_dict = defaultdict(int)
+        for sent in review_neg["reviews"]:
+            for word in generate_ngrams(sent):
+                freq_dict[word] += 1
+        fd_sorted = pd.DataFrame(
+            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+        fd_sorted.columns = ["word", "wordcount"]
+        trace2 = horizontal_bar_chart(fd_sorted.head(25), 'red')
 
-    #     ## Get the bar chart from negative reviews ##
-    #     freq_dict = defaultdict(int)
-    #     for sent in review_neg["reviews"]:
-    #         for word in generate_ngrams(sent):
-    #             freq_dict[word] += 1
-    #     fd_sorted = pd.DataFrame(
-    #         sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-    #     fd_sorted.columns = ["word", "wordcount"]
-    #     trace2 = horizontal_bar_chart(fd_sorted.head(25), 'red')
+        # Creating two subplots
+        fig = tools.make_subplots(rows=3, cols=1, vertical_spacing=0.04,
+                                  subplot_titles=["Frequent words of positive reviews", "Frequent words of neutral reviews",
+                                                  "Frequent words of negative reviews"])
+        fig.append_trace(trace0, 1, 1)
+        fig.append_trace(trace1, 2, 1)
+        fig.append_trace(trace2, 3, 1)
+        print("hello")
+        fig['layout'].update(height=1200, width=900,
+                             paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
+        print(type(fig))
 
-    #     # Creating two subplots
-    #     fig = tools.make_subplots(rows=3, cols=1, vertical_spacing=0.04,
-    #                               subplot_titles=["Frequent words of positive reviews", "Frequent words of neutral reviews",
-    #                                               "Frequent words of negative reviews"])
-    #     fig.append_trace(trace0, 1, 1)
-    #     fig.append_trace(trace1, 2, 1)
-    #     fig.append_trace(trace2, 3, 1)
-    #     print("hello")
-    #     fig['layout'].update(height=1200, width=900,
-    #                          paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
-    #     iplot(fig, filename='word-plots')
+        # plot(fig, filename='word-plots', image='png')
+        fig.write_image("images/word_count_plots.png")
+        ###################################################
+        # Need to create plot with more words (2, 3, etc) #
+        ###################################################
 
     # def feature_extraction(process_reviews):
     #     # calling the label encoder function

@@ -311,53 +311,56 @@ class SentimentAnalysis:
             )
             return trace
 
-        ## Get the bar chart from positive reviews ##
-        freq_dict = defaultdict(int)
-        for sent in review_pos["reviews"]:
-            for word in generate_ngrams(sent):
-                freq_dict[word] += 1
-        fd_sorted = pd.DataFrame(
-            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-        fd_sorted.columns = ["word", "wordcount"]
-        trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
+        def word_count(number_of_words):
+            ## Get the bar chart from positive reviews ##
+            freq_dict = defaultdict(int)
+            for sent in review_pos["reviews"]:
+                for word in generate_ngrams(sent, number_of_words):
+                    freq_dict[word] += 1
+            fd_sorted = pd.DataFrame(
+                sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+            fd_sorted.columns = ["word", "wordcount"]
+            trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
 
-        ## Get the bar chart from neutral reviews ##
-        freq_dict = defaultdict(int)
-        for sent in review_neu["reviews"]:
-            for word in generate_ngrams(sent):
-                freq_dict[word] += 1
-        fd_sorted = pd.DataFrame(
-            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-        fd_sorted.columns = ["word", "wordcount"]
-        trace1 = horizontal_bar_chart(fd_sorted.head(25), 'grey')
+            ## Get the bar chart from neutral reviews ##
+            freq_dict = defaultdict(int)
+            for sent in review_neu["reviews"]:
+                for word in generate_ngrams(sent, number_of_words):
+                    freq_dict[word] += 1
+            fd_sorted = pd.DataFrame(
+                sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+            fd_sorted.columns = ["word", "wordcount"]
+            trace1 = horizontal_bar_chart(fd_sorted.head(25), 'grey')
 
-        ## Get the bar chart from negative reviews ##
-        freq_dict = defaultdict(int)
-        for sent in review_neg["reviews"]:
-            for word in generate_ngrams(sent):
-                freq_dict[word] += 1
-        fd_sorted = pd.DataFrame(
-            sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
-        fd_sorted.columns = ["word", "wordcount"]
-        trace2 = horizontal_bar_chart(fd_sorted.head(25), 'red')
+            ## Get the bar chart from negative reviews ##
+            freq_dict = defaultdict(int)
+            for sent in review_neg["reviews"]:
+                for word in generate_ngrams(sent, number_of_words):
+                    freq_dict[word] += 1
+            fd_sorted = pd.DataFrame(
+                sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+            fd_sorted.columns = ["word", "wordcount"]
+            trace2 = horizontal_bar_chart(fd_sorted.head(25), 'red')
 
-        # Creating two subplots
-        fig = tools.make_subplots(rows=3, cols=1, vertical_spacing=0.04,
-                                  subplot_titles=["Frequent words of positive reviews", "Frequent words of neutral reviews",
-                                                  "Frequent words of negative reviews"])
-        fig.append_trace(trace0, 1, 1)
-        fig.append_trace(trace1, 2, 1)
-        fig.append_trace(trace2, 3, 1)
-        print("hello")
-        fig['layout'].update(height=1200, width=900,
-                             paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
-        print(type(fig))
+            # Creating two subplots
+            fig = tools.make_subplots(rows=3, cols=1, vertical_spacing=0.04,
+                                      subplot_titles=["Frequent words of positive reviews", "Frequent words of neutral reviews",
+                                                      "Frequent words of negative reviews"])
+            fig.append_trace(trace0, 1, 1)
+            fig.append_trace(trace1, 2, 1)
+            fig.append_trace(trace2, 3, 1)
+            print("hello")
+            fig['layout'].update(height=1200, width=900,
+                                 paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
+            print(type(fig))
 
-        # plot(fig, filename='word-plots', image='png')
-        fig.write_image("images/word_count_plots.png")
-        ###################################################
-        # Need to create plot with more words (2, 3, etc) #
-        ###################################################
+            # plot(fig, filename='word-plots', image='png')
+            fig.write_image("images/word_count_plots_" +
+                            str(number_of_words)+".png")
+
+        word_count(1)
+        word_count(2)
+        word_count(3)
 
     # def feature_extraction(process_reviews):
     #     # calling the label encoder function

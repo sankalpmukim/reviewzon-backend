@@ -58,6 +58,7 @@ class SentimentAnalysis_Musical:
         # Initalizing the class with the file
         self.raw_reviews = pd.read_csv(file_path)
         self.preprocessing_data()
+        self.data_visualization()
 
     def preprocessing_data(self) -> None:
         # Preprocessing the data
@@ -358,6 +359,25 @@ class SentimentAnalysis_Musical:
         word_count(2)
         word_count(3)
 
+        def plot_word_cloud(sentiment, text):
+            wordcloud = WordCloud(
+                width=3000,
+                height=2000,
+                background_color='black',
+                stopwords=STOPWORDS).generate(str(text))
+            fig = plt.figure(
+                figsize=(40, 30),
+                facecolor='k',
+                edgecolor='k')
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis('off')
+            plt.tight_layout(pad=0)
+            plt.savefig('images/wordcloud_'+sentiment+'.png')
+
+        plot_word_cloud('positive', review_pos['reviews'])
+        plot_word_cloud('neutral', review_neu['reviews'])
+        plot_word_cloud('negative', review_neg['reviews'])
+
     def feature_extraction_experiment(self):
         #################################################
         # Figure out how to send results to the website #
@@ -477,9 +497,6 @@ class SentimentAnalysis_Musical:
 
         cm = metrics.confusion_matrix(y_test, y_pred)
         plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
-
-        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
-        self.mlmodel.fit(X, y)
 
     def create_model(self, X, y):
         self.mlmodel = LogisticRegression(C=10000.0, random_state=0)

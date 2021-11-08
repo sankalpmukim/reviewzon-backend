@@ -1,58 +1,41 @@
-import logging
 from imblearn.over_sampling import SMOTE
 from collections import Counter
 from collections import defaultdict
 import cufflinks as cf
-from itertools import cycle
 from numpy.core.numeric import NaN
 from scipy import interp
 import pandas as pd
 import numpy as np
-from scipy.sparse import csr_matrix
-import nltk
 import re
 import string
 from wordcloud import WordCloud, STOPWORDS
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
-import sklearn
 from sklearn.svm import SVC
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import label_binarize
-from sklearn import svm, datasets
 from sklearn import preprocessing
 from sklearn import metrics
-from sklearn.metrics import classification_report
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import seaborn as sns
 from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
-from plotly.offline import plot
 import warnings
 
 warnings.filterwarnings('ignore')
 
 
 class SentimentAnalysis_Musical:
+    '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
     def __init__(self, file_path: str):
         # Initalizing the class with the file
@@ -61,6 +44,17 @@ class SentimentAnalysis_Musical:
         self.data_visualization()
 
     def preprocessing_data(self) -> None:
+        '''
+        This function preprocesses the data and stores it in a dataframe
+        Steps taken:
+        1. Removing the rows with NaN values
+        2. Combine the 'reviewText' and 'summary' column into a single column 'reviews'
+        3. Converting stars to sentiment values ['Positive', 'Negative', 'Neutral']
+        4. Splitting date into year, date and adding them as seperate columns
+        5. Remove whitespaces
+        6. Calculate values of helpfulness
+        7. Remove stopwords, punctuation and stemm the words
+        '''
         # Preprocessing the data
 
         # Creating a copy of the initial file read
@@ -203,7 +197,22 @@ class SentimentAnalysis_Musical:
             lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 
     def data_visualization(self) -> None:
-
+        '''
+        This function is used to visualize the data
+        Graphs generated:
+        1. Sentiment vs helpful rate
+        2. Year vs number of reviews, grouped by setiment
+        3. Day vs review count
+        4. Polarity distribution
+        5. Rating distribution
+        6. Review length distribution
+        7. Review word count distribution
+        8. Frequency of words grouped by sentiment (groups of 1,2,3)
+        9. Word cloud of each sentiment
+        '''
+        ###########################################
+        # Add ROC curve and AUC score to the plot #
+        ###########################################
         # plot layout
         plt.rcParams.update({'font.size': 18})
         rcParams['figure.figsize'] = 16, 9
@@ -379,6 +388,12 @@ class SentimentAnalysis_Musical:
         plot_word_cloud('negative', review_neg['reviews'])
 
     def feature_extraction_experiment(self):
+        '''
+        This function is used to perform feature extraction experiment
+        ##################
+        ####  TODO  ######
+        ##################
+        '''
         #################################################
         # Figure out how to send results to the website #
         #################################################
@@ -499,16 +514,20 @@ class SentimentAnalysis_Musical:
         plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
 
     def create_model(self, X, y):
+        '''
+        This function creates a model using the training data
+        '''
         self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
         self.mlmodel.fit(X, y)
 
-    def predict_review_sentiment(self, review):
+    def predict_review_sentiment(self, review: str) -> str:
+        '''
+        This function predicts the sentiment of the review
+        '''
         ##########################################
         # Optimization is required for this code #
         ##########################################
         label_encoder = preprocessing.LabelEncoder()
-        # review = [review]
-        # Encode labels in column 'sentiment'.
         self.process_reviews['sentiment'] = label_encoder.fit_transform(
             self.process_reviews['sentiment'])
         # Extracting 'reviews' for processing
@@ -554,7 +573,10 @@ class SentimentAnalysis_Musical:
         dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
         return dict_of_deconstruct[self.mlmodel.predict(smol_X)[0]]
 
-    def mass_predict_review_sentiment(self, list_of_reviews):
+    def mass_predict_review_sentiment(self, list_of_reviews: list) -> list:
+        '''
+        This function predicts the sentiment of the list of reviews by calling the predict_review_sentiment function
+        '''
         lst_of_predictions = []
         for review in list_of_reviews:
             lst_of_predictions.append(self.predict_review_sentiment(review))

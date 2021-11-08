@@ -58,8 +58,8 @@ class SentimentAnalysis:
         # Initalizing the class with the file
         self.raw_reviews = pd.read_csv(file_path)
         self.preprocessing_data()
-        print(self.process_reviews.info())
         self.data_visualization()
+        self.feature_extraction_train()
 
     def preprocessing_data(self) -> None:
         # Preprocessing the data
@@ -349,10 +349,8 @@ class SentimentAnalysis:
             fig.append_trace(trace0, 1, 1)
             fig.append_trace(trace1, 2, 1)
             fig.append_trace(trace2, 3, 1)
-            print("hello")
             fig['layout'].update(height=1200, width=900,
                                  paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
-            print(type(fig))
 
             # plot(fig, filename='word-plots', image='png')
             fig.write_image("images/word_count_plots_" +
@@ -362,133 +360,172 @@ class SentimentAnalysis:
         word_count(2)
         word_count(3)
 
-    # def feature_extraction(process_reviews):
-    #     # calling the label encoder function
-    #     label_encoder = preprocessing.LabelEncoder()
+    def feature_extraction_train(self):
+        label_encoder = preprocessing.LabelEncoder()
 
-    #     # Encode labels in column 'sentiment'.
-    #     process_reviews['sentiment'] = label_encoder.fit_transform(
-    #         process_reviews['sentiment'])
-    #     # Extracting 'reviews' for processing
-    #     review_features = process_reviews.copy()
-    #     review_features = review_features[['reviews']].reset_index(drop=True)
+        # Encode labels in column 'sentiment'.
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
+                      'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
+                      'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
+                      'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
+                      'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
+                      'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
+                      'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
+                      'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
+                      'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
+                      'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
+                      'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            review = review.split()
+            review = [ps.stem(word)
+                      for word in review if not word in stop_words]
+            review = ' '.join(review)
+            corpus.append(review)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        X = tfidf_vectorizer.fit_transform(list(review_features['reviews']))
 
-    #     # Performing stemming on the review dataframe
-    #     ps = PorterStemmer()
-    #     stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
-    #                   'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
-    #                   'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
-    #                   'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
-    #                   'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
-    #                   'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
-    #                   'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
-    #                   'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
-    #                   'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
-    #                   'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
-    #                   'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
-    #     # splitting and adding the stemmed words except stopwords
-    #     corpus = []
-    #     for i in range(0, len(review_features)):
-    #         review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
-    #         review = review.split()
-    #         review = [ps.stem(word)
-    #                   for word in review if not word in stop_words]
-    #         review = ' '.join(review)
-    #         corpus.append(review)
+        # Getting the target variable(encoded)
+        y = self.process_reviews['sentiment']
 
-    #     tfidf_vectorizer = TfidfVectorizer(
-    #         max_features=5000, ngram_range=(2, 2))
-    #     # TF-IDF feature matrix
-    #     X = tfidf_vectorizer.fit_transform(review_features['reviews'])
+        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel.fit(X, y)
 
-    #     # Getting the target variable(encoded)
-    #     y = process_reviews['sentiment']
+    def feature_extraction_experiment(self):
+        # calling the label encoder function
+        label_encoder = preprocessing.LabelEncoder()
 
-    #     print(f'Original dataset shape : {Counter(y)}')
+        # Encode labels in column 'sentiment'.
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
+                      'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
+                      'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
+                      'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
+                      'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
+                      'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
+                      'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
+                      'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
+                      'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
+                      'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
+                      'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            review = review.split()
+            review = [ps.stem(word)
+                      for word in review if not word in stop_words]
+            review = ' '.join(review)
+            corpus.append(review)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        X = tfidf_vectorizer.fit_transform(review_features['reviews'])
 
-    #     smote = SMOTE(random_state=42)
-    #     X_res, y_res = smote.fit_resample(X, y)
+        # Getting the target variable(encoded)
+        y = self.process_reviews['sentiment']
+        print(f'Original dataset shape : {Counter(y)}')
 
-    #     print(f'Resampled dataset shape {Counter(y_res)}')
+        smote = SMOTE(random_state=42)
+        X_res, y_res = smote.fit_resample(X, y)
 
-    #     # Divide the dataset into Train and Test
-    #     X_train, X_test, y_train, y_test = train_test_split(
-    #         X_res, y_res, test_size=0.25, random_state=0)
+        print(f'Resampled dataset shape {Counter(y_res)}')
 
-    #     def plot_confusion_matrix(cm, classes,
-    #                               normalize=False,
-    #                               title='Confusion matrix',
-    #                               cmap=plt.cm.Blues):
-    #         """
-    #         This function prints and plots the confusion matrix.
-    #         Normalization can be applied by setting `normalize=True`.
-    #         """
+        # Divide the dataset into Train and Test
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_res, y_res, test_size=0.25, random_state=0)
 
-    #         plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    #         plt.title(title)
-    #         plt.colorbar()
-    #         tick_marks = np.arange(len(classes))
-    #         plt.xticks(tick_marks, classes, rotation=45)
-    #         plt.yticks(tick_marks, classes)
+        def plot_confusion_matrix(cm, classes,
+                                  normalize=False,
+                                  title='Confusion matrix',
+                                  cmap=plt.cm.Blues):
+            """
+            This function prints and plots the confusion matrix.
+            Normalization can be applied by setting `normalize=True`.
+            """
 
-    #         if normalize:
-    #             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    #             print("Normalized confusion matrix")
-    #         else:
-    #             print('Confusion matrix, without normalization')
+            plt.imshow(cm, interpolation='nearest', cmap=cmap)
+            plt.title(title)
+            plt.colorbar()
+            tick_marks = np.arange(len(classes))
+            plt.xticks(tick_marks, classes, rotation=45)
+            plt.yticks(tick_marks, classes)
 
-    #         thresh = cm.max() / 2.
-    #         for i in range(cm.shape[0]):
-    #             for j in range(cm.shape[1]):
-    #                 plt.text(j, i, cm[i, j],
-    #                          horizontalalignment="center",
-    #                          color="white" if cm[i, j] > thresh else "black")
+            if normalize:
+                cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+                print("Normalized confusion matrix")
+            else:
+                print('Confusion matrix, without normalization')
 
-    #         plt.tight_layout()
-    #         plt.ylabel('True label')
-    #         plt.xlabel('Predicted label')
-    #         plt.show()
+            thresh = cm.max() / 2.
+            for i in range(cm.shape[0]):
+                for j in range(cm.shape[1]):
+                    plt.text(j, i, cm[i, j],
+                             horizontalalignment="center",
+                             color="white" if cm[i, j] > thresh else "black")
 
-    #     # creating the objects
-    #     logreg_cv = LogisticRegression(random_state=0)
-    #     dt_cv = DecisionTreeClassifier()
-    #     knn_cv = KNeighborsClassifier()
-    #     svc_cv = SVC()
-    #     nb_cv = BernoulliNB()
-    #     cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
-    #                2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
-    #     cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
+            plt.tight_layout()
+            plt.ylabel('True label')
+            plt.xlabel('Predicted label')
+            plt.savefig("images/confusion_matrix.jpg")
+            plt.clf()
 
-    #     for i, model in enumerate(cv_models):
-    #         print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
-    #             model, X, y, cv=10, scoring='accuracy').mean()))
+        # creating the objects
+        logreg_cv = LogisticRegression(random_state=0)
+        dt_cv = DecisionTreeClassifier()
+        knn_cv = KNeighborsClassifier()
+        svc_cv = SVC()
+        nb_cv = BernoulliNB()
+        cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
+                   2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
+        cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
 
-    #     param_grid = {'C': np.logspace(-4, 4, 50),
-    #                   'penalty': ['l1', 'l2']}
-    #     clf = GridSearchCV(LogisticRegression(random_state=0),
-    #                        param_grid, cv=5, verbose=0, n_jobs=-1)
-    #     best_model = clf.fit(X_train, y_train)
-    #     print(best_model.best_estimator_)
-    #     print("The mean accuracy of the model is:",
-    #           best_model.score(X_test, y_test))
+        for i, model in enumerate(cv_models):
+            print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
+                model, X, y, cv=10, scoring='accuracy').mean()))
 
-    #     logreg = LogisticRegression(C=10000.0, random_state=0)
-    #     logreg.fit(X_train, y_train)
-    #     y_pred = logreg.predict(X_test)
-    #     print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
-    #         logreg.score(X_test, y_test)))
+        param_grid = {'C': np.logspace(-4, 4, 50),
+                      'penalty': ['l1', 'l2']}
+        clf = GridSearchCV(LogisticRegression(random_state=0),
+                           param_grid, cv=5, verbose=0, n_jobs=-1)
+        best_model = clf.fit(X_train, y_train)
+        print(best_model.best_estimator_)
+        print("The mean accuracy of the model is:",
+              best_model.score(X_test, y_test))
 
-    #     logreg = LogisticRegression(C=10000.0, random_state=0)
-    #     logreg.fit(X_train, y_train)
-    #     y_pred = logreg.predict(X_test)
-    #     print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
-    #         logreg.score(X_test, y_test)))
+        logreg = LogisticRegression(C=10000.0, random_state=0)
+        logreg.fit(X_train, y_train)
+        y_pred = logreg.predict(X_test)
+        print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+            logreg.score(X_test, y_test)))
 
-    #     cm = metrics.confusion_matrix(y_test, y_pred)
-    #     plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
+        cm = metrics.confusion_matrix(y_test, y_pred)
+        plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
+
+        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel.fit(X, y)
 
 
 # cleaned_data = preprocessing_data()
 # data_visualization(cleaned_data)
 # feature_extraction(cleaned_data)
 new_obj = SentimentAnalysis('Musical_instruments_reviews.csv')
+new_obj.predict_review_sentiment(
+    'This is terrible i hate it dont buy this')

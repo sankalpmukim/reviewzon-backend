@@ -52,14 +52,12 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-class SentimentAnalysis:
+class SentimentAnalysis_Musical:
 
     def __init__(self, file_path: str):
         # Initalizing the class with the file
         self.raw_reviews = pd.read_csv(file_path)
         self.preprocessing_data()
-        self.data_visualization()
-        self.feature_extraction_train()
 
     def preprocessing_data(self) -> None:
         # Preprocessing the data
@@ -360,49 +358,10 @@ class SentimentAnalysis:
         word_count(2)
         word_count(3)
 
-    def feature_extraction_train(self):
-        label_encoder = preprocessing.LabelEncoder()
-
-        # Encode labels in column 'sentiment'.
-        self.process_reviews['sentiment'] = label_encoder.fit_transform(
-            self.process_reviews['sentiment'])
-        # Extracting 'reviews' for processing
-        review_features = self.process_reviews.copy()
-        review_features = review_features[['reviews']].reset_index(drop=True)
-        # Performing stemming on the review dataframe
-        ps = PorterStemmer()
-        stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
-                      'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
-                      'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
-                      'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
-                      'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
-                      'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
-                      'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
-                      'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
-                      'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
-                      'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
-                      'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
-        # splitting and adding the stemmed words except stopwords
-        corpus = []
-        for i in range(0, len(review_features)):
-            review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
-            review = review.split()
-            review = [ps.stem(word)
-                      for word in review if not word in stop_words]
-            review = ' '.join(review)
-            corpus.append(review)
-        tfidf_vectorizer = TfidfVectorizer(
-            max_features=5000, ngram_range=(2, 2))
-        # TF-IDF feature matrix
-        X = tfidf_vectorizer.fit_transform(list(review_features['reviews']))
-
-        # Getting the target variable(encoded)
-        y = self.process_reviews['sentiment']
-
-        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
-        self.mlmodel.fit(X, y)
-
     def feature_extraction_experiment(self):
+        #################################################
+        # Figure out how to send results to the website #
+        #################################################
         # calling the label encoder function
         label_encoder = preprocessing.LabelEncoder()
 
@@ -522,10 +481,70 @@ class SentimentAnalysis:
         self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
         self.mlmodel.fit(X, y)
 
+    def create_model(self, X, y):
+        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel.fit(X, y)
 
-# cleaned_data = preprocessing_data()
-# data_visualization(cleaned_data)
-# feature_extraction(cleaned_data)
-new_obj = SentimentAnalysis('Musical_instruments_reviews.csv')
-new_obj.predict_review_sentiment(
-    'This is terrible i hate it dont buy this')
+    def predict_review_sentiment(self, review):
+        ##########################################
+        # Optimization is required for this code #
+        ##########################################
+        label_encoder = preprocessing.LabelEncoder()
+        # review = [review]
+        # Encode labels in column 'sentiment'.
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'herself', 'here', 'your', 'each',
+                      'we', 'he', 'my', "you've", 'having', 'in', 'both', 'for', 'themselves', 'are', 'them', 'other',
+                      'and', 'an', 'during', 'their', 'can', 'yourself', 'she', 'until', 'so', 'these', 'ours', 'above',
+                      'what', 'while', 'have', 're', 'more', 'only', "needn't", 'when', 'just', 'that', 'were', "don't",
+                      'very', 'should', 'any', 'y', 'isn', 'who',  'a', 'they', 'to', 'too', "should've", 'has', 'before',
+                      'into', 'yours', "it's", 'do', 'against', 'on',  'now', 'her', 've', 'd', 'by', 'am', 'from',
+                      'about', 'further', "that'll", "you'd", 'you', 'as', 'how', 'been', 'the', 'or', 'doing', 'such',
+                      'his', 'himself', 'ourselves',  'was', 'through', 'out', 'below', 'own', 'myself', 'theirs',
+                      'me', 'why', 'once',  'him', 'than', 'be', 'most', "you'll", 'same', 'some', 'with', 'few', 'it',
+                      'at', 'after', 'its', 'which', 'there', 'our', 'this', 'hers', 'being', 'did', 'of', 'had', 'under',
+                      'over', 'again', 'where', 'those', 'then', "you're", 'i', 'because', 'does', 'all']
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            reviewx = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            reviewx = reviewx.split()
+            reviewx = [ps.stem(word)
+                       for word in reviewx if not word in stop_words]
+            reviewx = ' '.join(reviewx)
+            corpus.append(reviewx)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        all_reviews.append(review)
+        print(all_reviews[-1])
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-1]
+        y = self.process_reviews['sentiment']
+        smol_X = All_X[-1]
+        try:
+            self.mlmodel
+        except AttributeError:
+            self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        return dict_of_deconstruct[self.mlmodel.predict(smol_X)[0]]
+
+    def mass_predict_review_sentiment(self, list_of_reviews):
+        lst_of_predictions = []
+        for review in list_of_reviews:
+            lst_of_predictions.append(self.predict_review_sentiment(review))
+        return lst_of_predictions
+
+
+if __name__ == "__main__":
+    new_obj = SentimentAnalysis_Musical('Musical_instruments_reviews.csv')
+    print(new_obj.mass_predict_review_sentiment([
+        'This is terrible i hate it dont buy this', "I finally have a friend. Thank you. If you want him to be a little more realistic as Ryan, I suggest adding a scar, like in the picture above. Truly grateful for this work of art."]))

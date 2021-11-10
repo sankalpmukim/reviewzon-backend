@@ -48,11 +48,11 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Musical:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str = 'Musical_instruments_reviews.csv'):
         # Initalizing the class with the file
         self.raw_reviews = pd.read_csv(file_path)
         self.preprocessing_data()
-        self.data_visualization()
+        # self.data_visualization()
 
     def preprocessing_data(self) -> None:
         '''
@@ -64,7 +64,7 @@ class SentimentAnalysis_Musical:
         4. Splitting date into year, date and adding them as seperate columns
         5. Remove whitespaces
         6. Calculate values of helpfulness
-        7. Remove stopwords, punctuation and stemm the words
+        7. Remove stopwords, punctuation and stem the words
         '''
         # Preprocessing the data
 
@@ -195,6 +195,8 @@ class SentimentAnalysis_Musical:
         global stop_words
         self.process_reviews['reviews'] = self.process_reviews['reviews'].apply(
             lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
+
+        print(self.process_reviews.info())
 
     def data_visualization(self) -> None:
         '''
@@ -566,4 +568,4 @@ class SentimentAnalysis_Musical:
 if __name__ == "__main__":
     new_obj = SentimentAnalysis_Musical('Musical_instruments_reviews.csv')
     print(new_obj.mass_predict_review_sentiment([
-        'This is terrible i hate it dont buy this', "I finally have a friend. Thank you. If you want him to be a little more realistic as Ryan, I suggest adding a scar, like in the picture above. Truly grateful for this work of art."]))
+        'This is terrible i hate it dont buy this', "Truly grateful for this work of art."]))

@@ -68,37 +68,34 @@ class ReviewScraper:
             except:
                 print("***Data***")
                 print(data)
-                print("***Response***")
-                print(response_text)
+                # print("***Response***")
+                # print(response_text)
         return rows
 
-    async def main(self, baseurl: str):
+    async def main(self, baseurl: str, num_pages: int = 12):
         split = baseurl.split('/')
         print(split)
         reviewurl = split[0]+"//"+split[2]+"/"+split[3]+"/"+"product-reviews"+"/" + \
             split[5]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
-        with open('data.csv', 'w', encoding="utf-8", newline="") as outfile:
-            writer = csv.DictWriter(outfile, fieldnames=["title", "content", "date", "variant",
-                                                         "images", "verified", "author", "rating", "product", "url"], quoting=csv.QUOTE_ALL)
-            writer.writeheader()
-            async with aiohttp.ClientSession() as session:
-                urls = [reviewurl]
-                urls += [f"{reviewurl}&pageNumber={i}" for i in range(2, 13)]
-                tasks = []
-                for url in urls:
-                    print(url)
-                    task = asyncio.ensure_future(
-                        self.get_page_data(session, url))
-                    tasks.append(task)
 
-                all_pages = await asyncio.gather(*tasks)
-                self.all_pages = all_pages
-            for page in all_pages:
-                writer.writerows(page)
+        async with aiohttp.ClientSession() as session:
+            urls = [reviewurl]
+            urls += [f"{reviewurl}&pageNumber={i}" for i in range(
+                2, num_pages+1)]
+            tasks = []
+            for url in urls:
+                print(url)
+                task = asyncio.ensure_future(
+                    self.get_page_data(session, url))
+                tasks.append(task)
 
-    def get_pages_data(self, baseurl: str):
+            all_pages = await asyncio.gather(*tasks)
+            all_pages = [y for x in all_pages for y in x]
+            self.all_pages = all_pages
+
+    def get_pages_data(self, baseurl: str, num_pages: int = 12):
         start_time = datetime.datetime.now()
-        asyncio.run(self.main(baseurl))
+        asyncio.run(self.main(baseurl, num_pages))
         end_time = datetime.datetime.now()
         print("Total time taken:", end_time-start_time)
 

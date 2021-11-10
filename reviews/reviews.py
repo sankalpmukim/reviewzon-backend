@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 from aiohttp.client_reqrep import ClientResponse
 from lxml.html import fromstring
 from selectorlib import Extractor
@@ -74,9 +75,19 @@ class ReviewScraper:
 
     async def main(self, baseurl: str, num_pages: int = 12):
         split = baseurl.split('/')
+
+        def fixurl(splitted: List[str]) -> List[str]:
+            arr = []
+            for i in [0, 2, 3, 5]:
+                if "?" in splitted[i]:
+                    arr.append(splitted[i].split('?')[0])
+                else:
+                    arr.append(splitted[i])
+            return arr
+        split = fixurl(split)
         print(split)
-        reviewurl = split[0]+"//"+split[2]+"/"+split[3]+"/"+"product-reviews"+"/" + \
-            split[5]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+        reviewurl = split[0]+"//"+split[1]+"/"+split[2]+"/"+"product-reviews"+"/" + \
+            split[3]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
 
         async with aiohttp.ClientSession() as session:
             urls = [reviewurl]

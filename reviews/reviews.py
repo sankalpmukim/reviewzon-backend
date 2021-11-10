@@ -20,8 +20,8 @@ class ReviewScraper:
 
         # Create an Extractor by reading from the YAML file
         cwd = os.curdir
-        print(cwd)
-        print(os.getcwd())
+        # print(cwd)
+        # print(os.getcwd())
         self.e = Extractor.from_yaml_file(
             os.getcwd()+"\\reviews\selectors.yml")
 
@@ -68,8 +68,8 @@ class ReviewScraper:
             except:
                 print("***Data***")
                 print(data)
-                # print("***Response***")
-                # print(response_text)
+                print("***Response***")
+                print(response_text[:25]+'...')
         return rows
 
     async def main(self, baseurl: str, num_pages: int = 12):
@@ -84,7 +84,6 @@ class ReviewScraper:
                 2, num_pages+1)]
             tasks = []
             for url in urls:
-                print(url)
                 task = asyncio.ensure_future(
                     self.get_page_data(session, url))
                 tasks.append(task)

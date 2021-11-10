@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 from aiohttp.client_reqrep import ClientResponse
 from lxml.html import fromstring
 from selectorlib import Extractor
@@ -20,8 +21,8 @@ class ReviewScraper:
 
         # Create an Extractor by reading from the YAML file
         cwd = os.curdir
-        print(cwd)
-        print(os.getcwd())
+        # print(cwd)
+        # print(os.getcwd())
         self.e = Extractor.from_yaml_file(
             os.getcwd()+"\\reviews\selectors.yml")
 
@@ -68,15 +69,25 @@ class ReviewScraper:
             except:
                 print("***Data***")
                 print(data)
-                # print("***Response***")
-                # print(response_text)
+                print("***Response***")
+                print(response_text[:25]+'...')
         return rows
 
     async def main(self, baseurl: str, num_pages: int = 12):
         split = baseurl.split('/')
+
+        def fixurl(splitted: List[str]) -> List[str]:
+            arr = []
+            for i in [0, 2, 3, 5]:
+                if "?" in splitted[i]:
+                    arr.append(splitted[i].split('?')[0])
+                else:
+                    arr.append(splitted[i])
+            return arr
+        split = fixurl(split)
         print(split)
-        reviewurl = split[0]+"//"+split[2]+"/"+split[3]+"/"+"product-reviews"+"/" + \
-            split[5]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+        reviewurl = split[0]+"//"+split[1]+"/"+split[2]+"/"+"product-reviews"+"/" + \
+            split[3]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
 
         async with aiohttp.ClientSession() as session:
             urls = [reviewurl]
@@ -84,7 +95,6 @@ class ReviewScraper:
                 2, num_pages+1)]
             tasks = []
             for url in urls:
-                print(url)
                 task = asyncio.ensure_future(
                     self.get_page_data(session, url))
                 tasks.append(task)

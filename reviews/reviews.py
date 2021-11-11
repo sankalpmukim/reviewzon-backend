@@ -29,6 +29,7 @@ class ReviewScraper:
         self.fo = open(os.getcwd()+"\\reviews\config.json")
         self.API_KEYS = json.load(self.fo)["API_KEYS"]
         self.count = 0
+        self.collected_data = []
 
     async def scrape(self, r: ClientResponse):
         # Pass the HTML of the page and create
@@ -116,8 +117,9 @@ class ReviewScraper:
         self.collected_data = self.all_pages
         end_time = datetime.datetime.now()
         print("Total time taken:", end_time-start_time)
+        return self.all_pages
 
-    def get_pages_data_split(self, baseurl: str, begin_pages: int = 1, num_pages: int = 12):
+    def get_reviews(self, baseurl: str, num_pages: int = 12, begin_pages: int = 1):
         start_time = datetime.datetime.now()
         total_keys = len(self.API_KEYS)
         all_page_data = []
@@ -128,14 +130,23 @@ class ReviewScraper:
                           num_pages=total_keys*5-1)
             )
             all_page_data.extend(self.all_pages)
-        self.collected_data = all_page_data
+        self.collected_data.extend(all_page_data)
         end_time = datetime.datetime.now()
         print("Total time taken:", end_time-start_time)
+        return all_page_data
+
+    def retrieve_data(self):
+        return self.collected_data
+
+    def clear_data(self):
+        self.collected_data = []
 
 
 if __name__ == "__main__":
     obj = ReviewScraper()
-    baseurl = input()
+    baseurl1 = input()
+    baseurl2 = input()
     # obj.get_pages_data_unanimous(baseurl=baseurl, begin_pages=5, num_pages=20)
-    obj.get_pages_data_split(baseurl=baseurl, begin_pages=2, num_pages=80)
+    obj.get_reviews(baseurl=baseurl1, num_pages=80, begin_pages=2)
+    obj.get_reviews(baseurl=baseurl2, num_pages=80, begin_pages=2)
     print(len(obj.collected_data))

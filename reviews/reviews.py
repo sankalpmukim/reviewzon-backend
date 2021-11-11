@@ -34,12 +34,13 @@ class ReviewScraper:
         # Pass the HTML of the page and create
         return (self.e.extract(await r.text()), await r.text())
 
-    def get_proxied_url(self, url: str, count):
-        print(count % 4)
-        API_KEY = self.API_KEYS[count % 4]
+    def get_proxied_url(self, url: str, count: int):
+        total_keys = len(self.API_KEYS)
+        print(count % total_keys)
+        API_KEY = self.API_KEYS[count % total_keys]
         return f"http://api.scraperapi.com?api_key={API_KEY}&url={url}"
 
-    async def get_page_data(self, session: aiohttp.ClientSession, reviewurl):
+    async def get_page_data(self, session: aiohttp.ClientSession, reviewurl: str):
         # Download the page using requests
         print("Downloading %s" % reviewurl)
         rows = []
@@ -73,7 +74,7 @@ class ReviewScraper:
                 print(response_text[:25]+'...')
         return rows
 
-    async def main(self, baseurl: str, num_pages: int = 12):
+    async def main(self, baseurl: str, begin_pages: int = 1, num_pages: int = 12):
         split = baseurl.split('/')
 
         def fixurl(splitted: List[str]) -> List[str]:
@@ -90,9 +91,14 @@ class ReviewScraper:
             split[3]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
 
         async with aiohttp.ClientSession() as session:
-            urls = [reviewurl]
-            urls += [f"{reviewurl}&pageNumber={i}" for i in range(
-                2, num_pages+1)]
+            urls = []
+            if begin_pages == 1:
+                urls.append(reviewurl)
+                urls.extend([f"{reviewurl}&pageNumber={i}" for i in range(
+                    2, num_pages+1)])
+            else:
+                urls.extend([f"{reviewurl}&pageNumber={i}" for i in range(
+                    begin_pages, begin_pages+num_pages+1)])
             tasks = []
             for url in urls:
                 task = asyncio.ensure_future(
@@ -103,9 +109,26 @@ class ReviewScraper:
             all_pages = [y for x in all_pages for y in x]
             self.all_pages = all_pages
 
-    def get_pages_data(self, baseurl: str, num_pages: int = 12):
+    def get_pages_data_unanimous(self, baseurl: str, begin_pages: int = 1, num_pages: int = 12):
         start_time = datetime.datetime.now()
-        asyncio.run(self.main(baseurl, num_pages))
+        asyncio.run(
+            self.main(baseurl, begin_pages=begin_pages, num_pages=num_pages))
+        self.collected_data = self.all_pages
+        end_time = datetime.datetime.now()
+        print("Total time taken:", end_time-start_time)
+
+    def get_pages_data_split(self, baseurl: str, begin_pages: int = 1, num_pages: int = 12):
+        start_time = datetime.datetime.now()
+        total_keys = len(self.API_KEYS)
+        all_page_data = []
+        for i in range(begin_pages, begin_pages+num_pages+1, total_keys*5):
+            print(i)
+            asyncio.run(
+                self.main(baseurl=baseurl, begin_pages=i,
+                          num_pages=total_keys*5-1)
+            )
+            all_page_data.extend(self.all_pages)
+        self.collected_data = all_page_data
         end_time = datetime.datetime.now()
         print("Total time taken:", end_time-start_time)
 
@@ -113,5 +136,6 @@ class ReviewScraper:
 if __name__ == "__main__":
     obj = ReviewScraper()
     baseurl = input()
-    obj.get_pages_data(baseurl=baseurl)
-    print(obj.all_pages)
+    # obj.get_pages_data_unanimous(baseurl=baseurl, begin_pages=5, num_pages=20)
+    obj.get_pages_data_split(baseurl=baseurl, begin_pages=2, num_pages=80)
+    print(len(obj.collected_data))

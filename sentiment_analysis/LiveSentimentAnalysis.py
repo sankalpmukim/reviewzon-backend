@@ -50,7 +50,8 @@ class SentimentAnalysis_Live:
     def __init__(self, data: pd.DataFrame):
         self.raw_reviews = data
         self.preprocessing_data()
-        self.data_visualization()
+        # self.data_visualization()
+        self.feature_extraction_experiment()
 
     def preprocessing_data(self):
         '''
@@ -322,3 +323,224 @@ class SentimentAnalysis_Live:
         plot_word_cloud('positive', review_pos['reviews'])
         plot_word_cloud('neutral', review_neu['reviews'])
         plot_word_cloud('negative', review_neg['reviews'])
+
+    def feature_extraction_experiment(self):
+        '''
+        This function is used to perform feature extraction experiment
+        ##################
+        ####  TODO  ######
+        ##################
+        '''
+        #################################################
+        # Figure out how to send results to the website #
+        #################################################
+        # calling the label encoder function
+        label_encoder = preprocessing.LabelEncoder()
+
+        # Encode labels in column 'sentiment'.
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        global stop_words
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            review = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            review = review.split()
+            review = [ps.stem(word)
+                      for word in review if not word in stop_words]
+            review = ' '.join(review)
+            corpus.append(review)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=5000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        X = tfidf_vectorizer.fit_transform(review_features['reviews'])
+
+        # Getting the target variable(encoded)
+        y = self.process_reviews['sentiment']
+        print(f'Original dataset shape : {Counter(y)}')
+
+        smote = SMOTE(random_state=42)
+        X_res, y_res = smote.fit_resample(X, y)
+
+        print(f'Resampled dataset shape {Counter(y_res)}')
+
+        # Divide the dataset into Train and Test
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_res, y_res, test_size=0.25, random_state=0)
+
+        print('Shape: ', X_train.shape, y_train.shape)
+
+        def plot_confusion_matrix(cm, classes,
+                                  normalize=False,
+                                  title='Confusion matrix',
+                                  cmap=plt.cm.Blues):
+            """
+            This function prints and plots the confusion matrix.
+            Normalization can be applied by setting `normalize=True`.
+            """
+
+            plt.imshow(cm, interpolation='nearest', cmap=cmap)
+            plt.title(title)
+            plt.colorbar()
+            tick_marks = np.arange(len(classes))
+            plt.xticks(tick_marks, classes, rotation=45)
+            plt.yticks(tick_marks, classes)
+
+            if normalize:
+                cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+                print("Normalized confusion matrix")
+            else:
+                print('Confusion matrix, without normalization')
+
+            thresh = cm.max() / 2.
+            for i in range(cm.shape[0]):
+                for j in range(cm.shape[1]):
+                    plt.text(j, i, cm[i, j],
+                             horizontalalignment="center",
+                             color="white" if cm[i, j] > thresh else "black")
+
+            plt.tight_layout()
+            plt.ylabel('True label')
+            plt.xlabel('Predicted label')
+            plt.savefig("images/confusion_matrix.jpg")
+            plt.clf()
+
+        # creating the objects
+        logreg_cv = LogisticRegression(random_state=0)
+        dt_cv = DecisionTreeClassifier()
+        knn_cv = KNeighborsClassifier()
+        svc_cv = SVC()
+        nb_cv = BernoulliNB()
+        cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
+                   2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
+        cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
+
+        for i, model in enumerate(cv_models):
+            print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
+                model, X, y, cv=10, scoring='accuracy').mean()))
+
+        param_grid = {'C': np.logspace(-4, 4, 50),
+                      'penalty': ['l1', 'l2']}
+        clf = GridSearchCV(LogisticRegression(random_state=0),
+                           param_grid, cv=5, verbose=0, n_jobs=-1)
+        best_model = clf.fit(X_train, y_train)
+        print(best_model.best_estimator_)
+        print("The mean accuracy of the model is:",
+              best_model.score(X_test, y_test))
+
+        logreg = LogisticRegression(C=10000.0, random_state=0)
+        logreg.fit(X_train, y_train)
+        y_pred = logreg.predict(X_test)
+        print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+            logreg.score(X_test, y_test)))
+
+        cm = metrics.confusion_matrix(y_test, y_pred)
+        plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
+
+    def create_model(self, X, y):
+        '''
+        This function creates a model using the training data
+        '''
+        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel.fit(X, y)
+
+    def predict_review_sentiment(self, review: str) -> str:
+        '''
+        This function predicts the sentiment of the review
+        '''
+        ##########################################
+        # Optimization is required for this code #
+        ##########################################
+        label_encoder = preprocessing.LabelEncoder()
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        global stop_words
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            reviewx = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            reviewx = reviewx.split()
+            reviewx = [ps.stem(word)
+                       for word in reviewx if not word in stop_words]
+            reviewx = ' '.join(reviewx)
+            corpus.append(reviewx)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=200, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        all_reviews.append(review)
+        print(all_reviews[-1])
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-1]
+        y = self.process_reviews['sentiment']
+        smol_X = All_X[-1]
+        try:
+            self.mlmodel
+        except AttributeError:
+            self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        return dict_of_deconstruct[self.mlmodel.predict(smol_X)[0]]
+
+    def mass_predict_review_sentiment(self, list_of_reviews: list) -> list:
+        # '''
+        # This function predicts the sentiment of the list of reviews by calling the predict_review_sentiment function
+        # '''
+        # lst_of_predictions = []
+        # for review in list_of_reviews:
+        #     lst_of_predictions.append(self.predict_review_sentiment(review))
+        # return lst_of_predictions
+        label_encoder = preprocessing.LabelEncoder()
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        global stop_words
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            reviewx = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            reviewx = reviewx.split()
+            reviewx = [ps.stem(word)
+                       for word in reviewx if not word in stop_words]
+            reviewx = ' '.join(reviewx)
+            corpus.append(reviewx)
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=200, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        # print(len(all_reviews))
+        all_reviews.extend(list_of_reviews)
+        # print(len(list_of_reviews))
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-(len(list_of_reviews))]
+        y = self.process_reviews['sentiment']
+        smol_X = All_X[-(len(list_of_reviews)):]
+        # print(smol_X.shape)
+        # print(All_X.shape)
+        self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        return [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+
+
+if __name__ == "__main__":
+    livedata = pd.read_csv('livedata.csv', index_col=0)
+    new_obj = SentimentAnalysis_Live(livedata)
+    livedata = pd.read_csv('Musical_instruments_reviews.csv')
+    # print(new_obj.mass_predict_review_sentiment(livedata['reviewText']))
+    print(new_obj.mass_predict_review_sentiment(
+        ['i love this phone. i spend lots of time with it. its fast and it works']))

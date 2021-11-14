@@ -31,10 +31,10 @@ async def root(request: Request):
     key = random.randint(10000000, 99999999)
     while key in livedata.val().keys():
         key = random.randint(10000000, 99999999)
-    init_data = "<#67FF0F>Data received"
+    init_data = "#67FF0F:Data received"
     db.child("livedata").child(str(key)).set({0: init_data})
     db.child("livedata").child(str(key)).update(
-        {1: "<#00FF00>Initializing processes.."})
+        {1: "#00FF00:Initializing processes.."})
     count = 2
     threadsplit = threading.Thread(target=handler, args=(data, key, count))
     threadsplit.start()

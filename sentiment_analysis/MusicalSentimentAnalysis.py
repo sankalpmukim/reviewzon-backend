@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import re
 import string
+import time
 from wordcloud import WordCloud, STOPWORDS
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -48,11 +49,31 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Musical:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, file_path: str = 'Musical_instruments_reviews.csv'):
+    def __init__(self, logger: list, file_path: str = 'Musical_instruments_reviews.csv'):
         # Initalizing the class with the file
+        self.logger = logger
+        self.logger.log("Reading dataset locally...")
         self.raw_reviews = pd.read_csv(file_path)
+        time.sleep(1)
+        self.logger.log("Dataset read successfully")
+        self.logger.log("Shape of the dataset: {}".format(
+            self.raw_reviews.shape), "yellow")
+        self.logger.log("Columns present in the dataset: {}".format(
+            self.raw_reviews.columns), "yellow")
+        self.logger.log("Preprocessing dataset...")
         self.preprocessing_data()
-        # self.data_visualization()
+        self.logger.log("Preprocessing complete...")
+        self.logger.log("Shape of the dataset: {}".format(
+            self.process_reviews.shape), "yellow")
+        self.logger.log("Columns present in the dataset: {}".format(
+            self.raw_reviews.columns), "yellow")
+        self.process_reviews = self.process_reviews.drop(
+            ['reviewText', 'summary'], axis=1)
+        time.sleep(2)
+        self.logger.log(
+            "Commencing Data visualization tasks and image generation")
+        self.data_visualization()
+        self.logger.log("Data visualization complete...")
 
     def preprocessing_data(self) -> None:
         '''
@@ -72,14 +93,16 @@ class SentimentAnalysis_Musical:
         self.process_reviews = self.raw_reviews.copy()
 
         # Convert all NA values in review column to 'Missing'
+        self.logger.log(
+            ">Converting NA values in review column to 'Missing'", 'lightgreen')
         self.process_reviews['reviewText'] = self.process_reviews['reviewText'].fillna(
             'Missing')
 
         # Creating a new column called 'reviews', combining the reviewText and summary columns
+        self.logger.log(
+            ">Creating a new column called 'reviews', combining the reviewText and summary columns", 'lightgreen')
         self.process_reviews['reviews'] = self.process_reviews['reviewText'] + \
             self.process_reviews['summary']
-        self.process_reviews = self.process_reviews.drop(
-            ['reviewText', 'summary'], axis=1)
 
         # Figuring out the distribution of categories
 
@@ -96,6 +119,8 @@ class SentimentAnalysis_Musical:
             return val
 
         # Applying the function in our new column
+        self.logger.log(
+            ">Converting star values to ['Positive', 'Negative', 'Neutral'] Sentiments", 'lightgreen')
         self.process_reviews['sentiment'] = self.process_reviews.apply(
             sentiment_value, axis=1)
 
@@ -103,14 +128,16 @@ class SentimentAnalysis_Musical:
         new = self.process_reviews["reviewTime"].str.split(
             ",", n=1, expand=True)
 
+        self.logger.log(
+            ">Splitting date into year, date and adding them as seperate columns", 'lightgreen')
         # making separate date column from new data frame
         self.process_reviews["date"] = new[0]
 
         # making separate year column from new data frame
         self.process_reviews["year"] = new[1]
 
-        self.process_reviews = self.process_reviews.drop(
-            ['reviewTime'], axis=1)
+        # self.process_reviews = self.process_reviews.drop(
+        #     ['reviewTime'], axis=1)
 
         # Splitting the date
         new1 = self.process_reviews["date"].str.split(" ", n=1, expand=True)
@@ -122,7 +149,7 @@ class SentimentAnalysis_Musical:
         self.process_reviews["day"] = new1[1]
 
         self.process_reviews = self.process_reviews.drop(['date'], axis=1)
-
+        self.logger.log(">Creating the 'helpfulness column", 'lightgreen')
         # Splitting the dataset based on comma and square bracket
         new1 = self.process_reviews["helpful"].str.split(",", n=1, expand=True)
         new2 = new1[0].str.split("[", n=1, expand=True)
@@ -176,6 +203,8 @@ class SentimentAnalysis_Musical:
         # Removing unnecessary columns
         self.process_reviews = self.process_reviews.drop(
             ['reviewerName', 'unixReviewTime'], axis=1)
+        self.logger.log(
+            ">Cleaning review text by removing punctuation and stop words", 'lightgreen')
 
         def review_cleaning(text):
             '''Make text lowercase, remove text in square brackets,remove links,remove punctuation
@@ -196,7 +225,7 @@ class SentimentAnalysis_Musical:
         self.process_reviews['reviews'] = self.process_reviews['reviews'].apply(
             lambda x: ' '.join([word for word in x.split() if word not in (stop_words)]))
 
-        print(self.process_reviews.info())
+        # print(self.process_reviews.info())
 
     def data_visualization(self) -> None:
         '''
@@ -225,6 +254,7 @@ class SentimentAnalysis_Musical:
         senti_help = senti_help[senti_help['helpful_rate'] != 0.00]
 
         # Plotting phase
+        self.logger.log(">Plotting Sentiment vs helpful rate..", 'lightgreen')
         sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
         plt.title('Sentiment vs Helpfulness')
         plt.xlabel('Sentiment categories')
@@ -232,6 +262,7 @@ class SentimentAnalysis_Musical:
         plt.savefig('images/sentiment_helpful_rate.png')
         plt.clf()
 
+        self.logger.log(">Plotting Year vs number of reviews..", 'lightgreen')
         self.process_reviews.groupby(['year', 'sentiment'])[
             'sentiment'].count().unstack().plot(legend=True)
         plt.title('Year and Sentiment count')
@@ -247,6 +278,7 @@ class SentimentAnalysis_Musical:
         day.sort_values(by=['day'])
 
         # Plotting the graph
+        self.logger.log(">Plotting Day vs number of reviews..", 'lightgreen')
         sns.barplot(x="day", y="reviews", data=day)
         plt.title('Day vs Reviews count')
         plt.xlabel('Day')
@@ -254,6 +286,8 @@ class SentimentAnalysis_Musical:
         plt.savefig('images/day_reviews_count.png')
         plt.clf()
 
+        self.logger.log(
+            ">Plotting Sentiment Polarity distribution..", 'lightgreen')
         self.process_reviews['polarity'] = self.process_reviews['reviews'].map(
             lambda text: TextBlob(text).sentiment.polarity)
         self.process_reviews['review_len'] = self.process_reviews['reviews'].astype(
@@ -271,12 +305,14 @@ class SentimentAnalysis_Musical:
         plt.savefig('images/polarity_distribution.png')
         plt.clf()
 
+        self.logger.log('>Plotting Review Rating distribution..', 'lightgreen')
         self.process_reviews['overall'].plot(
             kind='hist',
             title='Review Rating Distribution')
         plt.savefig('images/rating_distribution.png')
         plt.clf()
 
+        self.logger.log('>Plotting Review length distribution..', 'lightgreen')
         self.process_reviews['review_len'].plot(
             kind='hist',
             bins=100,
@@ -284,6 +320,8 @@ class SentimentAnalysis_Musical:
         plt.savefig('images/review_len_distribution.png')
         plt.clf()
 
+        self.logger.log(
+            '>Plotting Review word count distribution..', 'lightgreen')
         self.process_reviews['word_count'].plot(
             kind='hist',
             bins=100,
@@ -365,7 +403,7 @@ class SentimentAnalysis_Musical:
             # plot(fig, filename='word-plots', image='png')
             fig.write_image("images/word_count_plots_" +
                             str(number_of_words)+".png")
-
+        self.logger.log('>Generating word count plots..', 'lightgreen')
         word_count(1)
         word_count(2)
         word_count(3)
@@ -384,10 +422,11 @@ class SentimentAnalysis_Musical:
             plt.axis('off')
             plt.tight_layout(pad=0)
             plt.savefig('images/wordcloud_'+sentiment+'.png')
-
+        self.logger.log('>Generating word cloud plots..', 'lightgreen')
         plot_word_cloud('positive', review_pos['reviews'])
         plot_word_cloud('neutral', review_neu['reviews'])
         plot_word_cloud('negative', review_neg['reviews'])
+        self.logger.log('>Saved All plots locally', 'lightgreen')
 
     def feature_extraction_experiment(self):
         '''

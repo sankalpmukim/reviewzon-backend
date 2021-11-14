@@ -131,3 +131,4 @@ images/
 config.json
 not_reviews.py
 livedata.csv
+.vscode/

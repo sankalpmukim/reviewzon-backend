@@ -26,8 +26,8 @@ class ReviewScraper:
         self.e = Extractor.from_yaml_file(
             os.getcwd()+"\\reviews\selectors.yml")
 
-        self.fo = open(os.getcwd()+"\\reviews\config.json")
-        self.API_KEYS = json.load(self.fo)["API_KEYS"]
+        self.fo = open(os.getcwd()+"\\config.json")
+        self.API_KEYS = json.load(self.fo)["ScraperAPI"]
         self.count = 0
         self.collected_data = []
 

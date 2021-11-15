@@ -66,7 +66,7 @@ class SentimentAnalysis_Musical:
         self.logger.log("Shape of the dataset: {}".format(
             self.process_reviews.shape), "yellow")
         self.logger.log("Columns present in the dataset: {}".format(
-            self.raw_reviews.columns), "yellow")
+            self.process_reviews.columns), "yellow")
         self.process_reviews = self.process_reviews.drop(
             ['reviewText', 'summary'], axis=1)
         time.sleep(2)
@@ -74,6 +74,9 @@ class SentimentAnalysis_Musical:
             "Commencing Data visualization tasks and image generation")
         self.data_visualization()
         self.logger.log("Data visualization complete...")
+        self.logger.log("Commencing Model training experiments...")
+        self.feature_extraction_experiment()
+        self.logger.log("Model training experiments complete...")
 
     def preprocessing_data(self) -> None:
         '''
@@ -431,13 +434,16 @@ class SentimentAnalysis_Musical:
     def feature_extraction_experiment(self):
         '''
         This function is used to perform feature extraction experiment
-        ##################
-        ####  TODO  ######
-        ##################
+        1) Encodes sentiment into numbers
+        2) Stems the words of the reviews
+        3) Removes stop words and punctuations
+        4) Vectorizes words
+        5) Performs SMOTE to balance the data
+        6) Splits the data into training and testing sets
+        7) Performs Grid Search to find the best parameters and algorithm
+        8) Performs cross validation to find the best parameters and algorithm
+        9) plots confusion matrix
         '''
-        #################################################
-        # Figure out how to send results to the website #
-        #################################################
         # calling the label encoder function
         label_encoder = preprocessing.LabelEncoder()
 
@@ -448,6 +454,7 @@ class SentimentAnalysis_Musical:
         review_features = self.process_reviews.copy()
         review_features = review_features[['reviews']].reset_index(drop=True)
         # Performing stemming on the review dataframe
+        self.logger.log('>Performing stemming on the reviews', 'lightgreen')
         ps = PorterStemmer()
         global stop_words
         # splitting and adding the stemmed words except stopwords
@@ -462,16 +469,19 @@ class SentimentAnalysis_Musical:
         tfidf_vectorizer = TfidfVectorizer(
             max_features=5000, ngram_range=(2, 2))
         # TF-IDF feature matrix
+        self.logger.log('>Performing TF-IDF on the reviews', 'lightgreen')
         X = tfidf_vectorizer.fit_transform(review_features['reviews'])
 
         # Getting the target variable(encoded)
         y = self.process_reviews['sentiment']
-        print(f'Original dataset shape : {Counter(y)}')
+        self.logger.log('>Performing SMOTE on the reviews', 'lightgreen')
+        self.logger.log(f'>>Original dataset shape: {Counter(y)}', 'yellow')
 
         smote = SMOTE(random_state=42)
         X_res, y_res = smote.fit_resample(X, y)
 
-        print(f'Resampled dataset shape {Counter(y_res)}')
+        self.logger.log(
+            f'>>Resampled dataset shape: {Counter(y_res)}', 'yellow')
 
         # Divide the dataset into Train and Test
         X_train, X_test, y_train, y_test = train_test_split(
@@ -516,30 +526,31 @@ class SentimentAnalysis_Musical:
         logreg_cv = LogisticRegression(random_state=0)
         dt_cv = DecisionTreeClassifier()
         knn_cv = KNeighborsClassifier()
-        svc_cv = SVC()
         nb_cv = BernoulliNB()
+        self.logger.log('>Performing Grid Search on models', 'lightgreen')
         cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
-                   2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
-        cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
+                   2: 'KNN', 3: 'Naive Bayes'}
+        cv_models = [logreg_cv, dt_cv, knn_cv, nb_cv]
 
         for i, model in enumerate(cv_models):
-            print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
-                model, X, y, cv=10, scoring='accuracy').mean()))
-
-        param_grid = {'C': np.logspace(-4, 4, 50),
+            self.logger.log(">>{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
+                model, X, y, cv=10, scoring='accuracy').mean()), 'yellow')
+        self.logger.log(
+            '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
+        param_grid = {'C': np.logspace(-4, 4, 25),
                       'penalty': ['l1', 'l2']}
         clf = GridSearchCV(LogisticRegression(random_state=0),
                            param_grid, cv=5, verbose=0, n_jobs=-1)
         best_model = clf.fit(X_train, y_train)
         print(best_model.best_estimator_)
-        print("The mean accuracy of the model is:",
-              best_model.score(X_test, y_test))
+        self.logger.log(">>The mean accuracy of the model is: "+str(
+                        best_model.score(X_test, y_test)), 'lightgreen')
 
         logreg = LogisticRegression(C=10000.0, random_state=0)
         logreg.fit(X_train, y_train)
         y_pred = logreg.predict(X_test)
-        print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
-            logreg.score(X_test, y_test)))
+        self.logger.log('>Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+            logreg.score(X_test, y_test)), 'lightgreen')
 
         cm = metrics.confusion_matrix(y_test, y_pred)
         plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])

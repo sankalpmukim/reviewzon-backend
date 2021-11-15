@@ -47,11 +47,23 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 
 class SentimentAnalysis_Live:
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, logger):
         self.raw_reviews = data
+        self.logger = logger
+        self.logger.log("Columns present in the dataset: {}".format(
+            self.raw_reviews.columns), "yellow")
+        self.logger.log("Preprocessing dataset...")
         self.preprocessing_data()
-        # self.data_visualization()
-        self.feature_extraction_experiment()
+        self.logger.log("Preprocessing complete...")
+        self.logger.log("Shape of the dataset: {}".format(
+            self.process_reviews.shape), "yellow")
+        self.logger.log("Columns present in the dataset: {}".format(
+            self.process_reviews.columns), "yellow")
+        self.logger.log(
+            "Commencing Data visualization tasks and image generation")
+        self.data_visualization()
+        self.logger.log("Data visualization complete...")
+        # self.feature_extraction_experiment()
 
     def preprocessing_data(self):
         '''
@@ -69,16 +81,22 @@ class SentimentAnalysis_Live:
         self.process_reviews = self.raw_reviews.copy()
 
         # Convert all NA values in review column to 'Missing'
+        self.logger.log(
+            ">Converting NA values in review column to 'Missing'", 'lightgreen')
         self.process_reviews['content'] = self.process_reviews['content'].fillna(
             'Missing')
 
         # Creating a new column called 'reviews', combining the reviewText and summary columns
+        self.logger.log(
+            ">Creating a new column called 'reviews', combining the content and title columns", 'lightgreen')
         self.process_reviews['reviews'] = self.process_reviews['content'] + \
             self.process_reviews['title']
         self.process_reviews = self.process_reviews.drop(
             ['content', 'title'], axis=1)
 
         # Figuring out the distribution of categories
+        self.process_reviews['rating'] = pd.to_numeric(
+            self.process_reviews['rating'])
 
         def sentiment_value(row):
             '''This function returns sentiment value based on the overall ratings from the user'''
@@ -93,6 +111,8 @@ class SentimentAnalysis_Live:
             return val
 
         # Applying the function in our new column
+        self.logger.log(
+            ">Converting star values to ['Positive', 'Negative', 'Neutral'] Sentiments", 'lightgreen')
         self.process_reviews['sentiment'] = self.process_reviews.apply(
             sentiment_value, axis=1)
 
@@ -100,13 +120,20 @@ class SentimentAnalysis_Live:
         # print(self.process_reviews['sentiment'].value_counts())
 
         # print(self.process_reviews['date'][5])
+        self.logger.log(
+            ">Splitting date into year, date and adding them as seperate columns", 'lightgreen')
         new = self.process_reviews["date"].str.split(
             " ", n=2, expand=True)
         self.process_reviews["day"] = new[0]
         self.process_reviews["month"] = new[1]
         self.process_reviews["year"] = new[2]
+        self.logger.log(
+            ">Dropping irrelevant columns and renaming others", 'lightgreen')
         self.process_reviews = self.process_reviews.drop(
             ['date', 'url', 'author', 'variant', 'images', 'verified', 'product'], axis=1)
+
+        self.logger.log(
+            ">Cleaning review text by removing punctuation and stop words", 'lightgreen')
 
         def review_cleaning(text):
             '''Make text lowercase, remove text in square brackets,remove links,remove punctuation
@@ -160,6 +187,7 @@ class SentimentAnalysis_Live:
         senti_help = senti_help[senti_help['helpful_rate'] != 0.00]
 
         # Plotting phase
+        self.logger.log('>Plotting Sentiment vs Helpful Rate', 'lightgreen')
         sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
         plt.title('Sentiment vs Helpfulness')
         plt.xlabel('Sentiment categories')
@@ -167,6 +195,7 @@ class SentimentAnalysis_Live:
         plt.savefig('images/sentiment_helpful_rate.png')
         plt.clf()
 
+        self.logger.log('>Plotting Year vs Number of Reviews', 'lightgreen')
         self.process_reviews.groupby(['year', 'sentiment'])[
             'sentiment'].count().unstack().plot(legend=True)
         plt.title('Year and Sentiment count')
@@ -182,6 +211,7 @@ class SentimentAnalysis_Live:
         day.sort_values(by=['day'])
 
         # Plotting the graph
+        self.logger.log('>Plotting Day vs Number of Reviews', 'lightgreen')
         sns.barplot(x="day", y="reviews", data=day)
         plt.title('Day vs Reviews count')
         plt.xlabel('Day')
@@ -198,7 +228,7 @@ class SentimentAnalysis_Live:
 
         cf.go_offline()
         cf.set_config_file(offline=False, world_readable=True)
-
+        self.logger.log('>Plotting Polarity Distribution', 'lightgreen')
         self.process_reviews['polarity'].plot(
             kind='hist',
             bins=50,
@@ -206,12 +236,16 @@ class SentimentAnalysis_Live:
         plt.savefig('images/polarity_distribution.png')
         plt.clf()
 
+        self.logger.log('>Plotting Rating Distribution', 'lightgreen')
+        self.process_reviews['overall'] = pd.to_numeric(
+            self.process_reviews['overall'])
         self.process_reviews['overall'].plot(
             kind='hist',
             title='Review Rating Distribution')
         plt.savefig('images/rating_distribution.png')
         plt.clf()
 
+        self.logger.log('>Plotting Review Length Distribution', 'lightgreen')
         self.process_reviews['review_len'].plot(
             kind='hist',
             bins=100,
@@ -219,6 +253,7 @@ class SentimentAnalysis_Live:
         plt.savefig('images/review_len_distribution.png')
         plt.clf()
 
+        self.logger.log('>Plotting Word Count Distribution', 'lightgreen')
         self.process_reviews['word_count'].plot(
             kind='hist',
             bins=100,
@@ -227,6 +262,7 @@ class SentimentAnalysis_Live:
         plt.clf()
 
         # Filtering data
+        print(self.process_reviews['sentiment'].value_counts())
         review_pos = self.process_reviews[self.process_reviews["sentiment"]
                                           == 'Positive'].dropna()
         review_neu = self.process_reviews[self.process_reviews["sentiment"]
@@ -264,6 +300,9 @@ class SentimentAnalysis_Live:
                     freq_dict[word] += 1
             fd_sorted = pd.DataFrame(
                 sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
+
+            print(fd_sorted.info())
+            print(fd_sorted.head())
             fd_sorted.columns = ["word", "wordcount"]
             trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
 
@@ -300,7 +339,7 @@ class SentimentAnalysis_Live:
             # plot(fig, filename='word-plots', image='png')
             fig.write_image("images/word_count_plots_" +
                             str(number_of_words)+".png")
-
+        self.logger.log('>Plotting Word Count Plots', 'lightgreen')
         word_count(1)
         word_count(2)
         word_count(3)
@@ -319,7 +358,7 @@ class SentimentAnalysis_Live:
             plt.axis('off')
             plt.tight_layout(pad=0)
             plt.savefig('images/wordcloud_'+sentiment+'.png')
-
+        self.logger.log('>Plotting Word Cloud', 'lightgreen')
         plot_word_cloud('positive', review_pos['reviews'])
         plot_word_cloud('neutral', review_neu['reviews'])
         plot_word_cloud('negative', review_neg['reviews'])

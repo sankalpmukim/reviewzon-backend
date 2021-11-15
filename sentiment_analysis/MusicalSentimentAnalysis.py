@@ -334,11 +334,11 @@ class SentimentAnalysis_Musical:
 
         # Filtering data
         review_pos = self.process_reviews[self.process_reviews["sentiment"]
-                                          == 'Positive'].dropna()
+                                          == 'Positive']
         review_neu = self.process_reviews[self.process_reviews["sentiment"]
-                                          == 'Neutral'].dropna()
+                                          == 'Neutral']
         review_neg = self.process_reviews[self.process_reviews["sentiment"]
-                                          == 'Negative'].dropna()
+                                          == 'Negative']
 
         ## custom function for ngram generation ##
 

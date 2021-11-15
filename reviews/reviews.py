@@ -17,7 +17,7 @@ import os
 
 class ReviewScraper:
 
-    def __init__(self) -> None:
+    def __init__(self, logger) -> None:
 
         # Create an Extractor by reading from the YAML file
         cwd = os.curdir
@@ -30,6 +30,9 @@ class ReviewScraper:
         self.API_KEYS = json.load(self.fo)["ScraperAPI"]
         self.count = 0
         self.collected_data = []
+        self.flag = True
+        self.logger = logger
+        self.valid_state = True
 
     async def scrape(self, r: ClientResponse):
         # Pass the HTML of the page and create
@@ -37,42 +40,51 @@ class ReviewScraper:
 
     def get_proxied_url(self, url: str, count: int):
         total_keys = len(self.API_KEYS)
-        print(count % total_keys)
         API_KEY = self.API_KEYS[count % total_keys]
         return f"http://api.scraperapi.com?api_key={API_KEY}&url={url}"
 
     async def get_page_data(self, session: aiohttp.ClientSession, reviewurl: str):
         # Download the page using requests
-        print("Downloading %s" % reviewurl)
+        # print("Downloading %s" % reviewurl)
         rows = []
         self.count += 1
-        async with session.get(self.get_proxied_url(reviewurl, self.count)) as r:
-            data, response_text = await self.scrape(r)
-            try:
-                if data:
-                    # print(data)
-                    for r in data['reviews']:
-                        r["product"] = data["product_title"]
-                        r['url'] = reviewurl
-                        if 'verified' in r:
-                            # print(r)
-                            if r["verified"] and ('Verified Purchase' in r['verified']):
-                                r['verified'] = 'Yes'
-                            else:
-                                r['verified'] = 'No'
-                        r['rating'] = r['rating'].split(' out of')[0]
-                        date_posted = r['date'].split('on ')[-1]
-                        if r['images']:
-                            r['images'] = "\n".join(r['images'])
-                        r['date'] = dateparser.parse(
-                            date_posted).strftime('%d %b %Y')
+        try:
+            async with session.get(self.get_proxied_url(reviewurl, self.count)) as r:
+                data, response_text = await self.scrape(r)
+                try:
+                    if data:
+                        # print(data)
+                        for r in data['reviews']:
+                            r["product"] = data["product_title"]
+                            r['url'] = reviewurl
+                            if 'verified' in r:
+                                # print(r)
+                                if r["verified"] and ('Verified Purchase' in r['verified']):
+                                    r['verified'] = 'Yes'
+                                else:
+                                    r['verified'] = 'No'
+                            r['rating'] = r['rating'].split(' out of')[0]
+                            date_posted = r['date'].split('on ')[-1]
+                            if r['images']:
+                                r['images'] = "\n".join(r['images'])
+                            r['date'] = dateparser.parse(
+                                date_posted).strftime('%d %b %Y')
 
-                        rows.append(r)
-            except:
-                print("***Data***")
-                print(data)
-                print("***Response***")
-                print(response_text[:25]+'...')
+                            rows.append(r)
+                except:
+                    print("***Data***")
+                    print(data)
+                    print("***Response***")
+                    print(response_text[:25]+'...')
+                    if data['next_page'] == None and self.flag:
+                        if 'Timed out' not in response_text[:25]:
+                            if 'Request failed' in response_text[:25]:
+                                print(response_text)
+                            self.flag = False
+                            self.logger.log(
+                                ">No more pages! Stopping further download..", "red")
+        except aiohttp.client_exceptions.ClientOSError:
+            self.logger.log('>Network error occured', 'red')
         return rows
 
     async def main(self, baseurl: str, begin_pages: int = 1, num_pages: int = 12):
@@ -87,7 +99,6 @@ class ReviewScraper:
                     arr.append(splitted[i])
             return arr
         split = fixurl(split)
-        print(split)
         reviewurl = split[0]+"//"+split[1]+"/"+split[2]+"/"+"product-reviews"+"/" + \
             split[3]+'/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
 
@@ -119,20 +130,25 @@ class ReviewScraper:
         print("Total time taken:", end_time-start_time)
         return self.all_pages
 
-    def get_reviews(self, baseurl: str, num_pages: int = 12, begin_pages: int = 1):
+    def get_reviews(self, baseurl: str, num_pages: int = 130, begin_pages: int = 1):
         start_time = datetime.datetime.now()
         total_keys = len(self.API_KEYS)
         all_page_data = []
         for i in range(begin_pages, begin_pages+num_pages+1, total_keys*5):
-            print(i)
-            asyncio.run(
-                self.main(baseurl=baseurl, begin_pages=i,
-                          num_pages=total_keys*5-1)
-            )
-            all_page_data.extend(self.all_pages)
+            if self.flag:
+                self.logger.log(">Downloading pages "+str(i) +
+                                " to "+str(i+(total_keys*5)-1), "lightgreen")
+                asyncio.run(
+                    self.main(baseurl=baseurl, begin_pages=i,
+                              num_pages=total_keys*5-1)
+                )
+                all_page_data.extend(self.all_pages)
+            else:
+                # self.logger.log(">No more pages")
+                break
         self.collected_data.extend(all_page_data)
         end_time = datetime.datetime.now()
-        print("Total time taken:", end_time-start_time)
+        # self.logger.log("Total time taken:"+ str(end_time-start_time))
         return all_page_data
 
     def retrieve_data(self):
@@ -145,8 +161,8 @@ class ReviewScraper:
 if __name__ == "__main__":
     obj = ReviewScraper()
     baseurl1 = input()
-    baseurl2 = input()
+    # baseurl2 = input()
     # obj.get_pages_data_unanimous(baseurl=baseurl, begin_pages=5, num_pages=20)
-    obj.get_reviews(baseurl=baseurl1, num_pages=80, begin_pages=2)
-    obj.get_reviews(baseurl=baseurl2, num_pages=80, begin_pages=2)
+    obj.get_reviews(baseurl=baseurl1, num_pages=120, begin_pages=1)
+    # obj.get_reviews(baseurl=baseurl2, num_pages=80, begin_pages=2)
     print(len(obj.collected_data))

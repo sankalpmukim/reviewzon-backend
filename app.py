@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 import uvicorn
 import threading
 from fastapi.middleware.cors import CORSMiddleware
-from handler import handler
+from handler import organizer
 import pyrebase
 import json
 import random
@@ -39,8 +39,8 @@ async def root(request: Request):
     db.child("livedata").child(str(key)).update(
         {1: {'color': '#00FF00', "message": "Initializing processes..", "error": False, "end": False}})
     count = 2
-    logger = [count, db, key]
-    threadsplit = threading.Thread(target=handler, args=(data, logger))
+    logger = [count, firebase, key]
+    threadsplit = threading.Thread(target=organizer, args=(data, logger))
     threadsplit.start()
     return {"unique_id": key}
 

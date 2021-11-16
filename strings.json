@@ -1,0 +1,66 @@
+{   
+    "obtaining_data" : {
+        "title": "Obtaining Data",
+        "text" : "This output talks about the process of obtaining data"
+    },
+    "preprocessing_output" : {
+        "title": "Preprocessing Output",
+        "text": "This output talks about preprocessing and what we did to preprocess the data"
+    },
+    "train_data_gist" : {
+        "title": "Train Data Gist",
+        "text": "This picture shows a small segment of the data that was used to train the ML model"
+    },
+    "sentiment_helpful_rate" : {
+        "title": "Sentiment vs Helpfulness Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "year_sentiment_count" : {
+        "title": "Year vs Sentiment Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "day_reviews_count" : {
+        "title": "Day vs Reviews Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "polarity_distribution" : {
+        "title": "Polarity Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "rating_distribution" : {
+        "title": "Rating Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "review_len_distribution" : {
+        "title": "Review Length Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "review_word_count_distribution" : {
+        "title": "Review Word Count Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "word_count_plots_1" : {
+        "title": "Word Count Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "word_count_plots_2" : {
+        "title": "Word Count Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "word_count_plots_3" : {
+        "title": "Word Count Distribution Graph",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "wordcloud_positive" : {
+        "title": "Wordcloud Positive",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "wordcloud_negative" : {
+        "title": "Wordcloud Negative",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
+    "wordcloud_neutral" : {
+        "title": "Wordcloud Neutral",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    }
+}

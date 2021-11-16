@@ -2,15 +2,19 @@ from reviews.reviews import ReviewScraper
 from sentiment_analysis import LiveSentimentAnalysis
 from sentiment_analysis import LocalSentimentAnalysis
 import pandas as pd
+import json
 
 
 class logger:
     def __init__(self, config: list):
         self.counter = config[0]
-        self.db = config[1]
-        self.key = config[2]
+        self.db = config[1].database()
+        self.storage = config[1].storage()
+        self.key = str(config[2])
         self.colors = {'lightgreen': '#14FCB9', 'green': '#57FC14',
                        'red': '#FF0000', 'yellow': '#FFFF00'}
+        self.strings = json.load(open('strings.json'))
+        self.output_counter = 0
 
     def log(self, message, color='green', end=False, error=False):
         self.db.child("livedata").child(self.key).update({self.counter: {'message': message,
@@ -20,8 +24,24 @@ class logger:
     def close(self):
         self.db.child("livedata").child(self.key).remove()
 
+    def create_output(self, prompt, file_path=None, file_name=None):
+        try:
+            cloud_file_name = 'files/'+self.key+"/"+file_name
+        except TypeError:
+            pass
+        url = "None"
+        data = self.strings[prompt]['text']
+        title = self.strings[prompt]['title']
 
-def handler(data, logger_data):
+        if file_path is not None:
+            self.storage.child(cloud_file_name).put(file_path)
+            url = self.storage.child(cloud_file_name).get_url(None)
+        self.db.child("output").child(self.key).update(
+            {title: {'data': data, 'url': url, 'counter': self.output_counter}})
+        self.output_counter += 1
+
+
+def organizer(data, logger_data):
     log_object = logger(logger_data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')

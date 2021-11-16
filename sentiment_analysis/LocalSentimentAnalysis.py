@@ -31,6 +31,7 @@ from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
 import warnings
+import dataframe_image as dfi
 
 warnings.filterwarnings('ignore')
 
@@ -50,7 +51,7 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Local:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, logger: list, file_path: str = 'Patio_Lawn_and_Garden_5.csv'):
+    def __init__(self, logger, file_path: str = 'Patio_Lawn_and_Garden_5.csv'):
         # Initalizing the class with the file
         self.logger = logger
         self.logger.log("Reading dataset locally...")
@@ -63,7 +64,13 @@ class SentimentAnalysis_Local:
             self.raw_reviews.columns), "yellow")
         self.logger.log("Preprocessing dataset...")
         self.preprocessing_data()
+        self.logger.create_output("obtaining_data")
+        self.logger.create_output("preprocessing_output")
+        dfi.export(self.process_reviews[:20],
+                   'images/'+self.logger.key+'_process_reviews.png')
         self.logger.log("Preprocessing complete...")
+        self.logger.create_output(
+            'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
         self.logger.log("Shape of the dataset: {}".format(
             self.process_reviews.shape), "yellow")
         self.logger.log("Columns present in the dataset: {}".format(
@@ -263,8 +270,10 @@ class SentimentAnalysis_Local:
         plt.title('Sentiment vs Helpfulness')
         plt.xlabel('Sentiment categories')
         plt.ylabel('helpful rate')
-        plt.savefig('images/sentiment_helpful_rate.png')
+        plt.savefig('images/'+self.logger.key+'_sentiment_helpful_rate.png')
         plt.clf()
+        self.logger.create_output(
+            'sentiment_helpful_rate', 'images/'+self.logger.key+'_sentiment_helpful_rate.png', 'sentiment_helpful_rate.png')
 
         self.logger.log(">Plotting Year vs number of reviews..", 'lightgreen')
         self.process_reviews.groupby(['year', 'sentiment'])[
@@ -272,9 +281,10 @@ class SentimentAnalysis_Local:
         plt.title('Year and Sentiment count')
         plt.xlabel('Year')
         plt.ylabel('Sentiment count')
-        plt.savefig('images/year_sentiment_count.png')
+        plt.savefig('images/'+self.logger.key+'_year_sentiment_count.png')
         plt.clf()
-
+        self.logger.create_output('year_sentiment_count', 'images/'+self.logger.key +
+                                  '_year_sentiment_count.png', 'year_sentiment_count.png')
         # Creating a dataframe
         day = pd.DataFrame(self.process_reviews.groupby(
             'day')['reviews'].count()).reset_index()
@@ -287,9 +297,10 @@ class SentimentAnalysis_Local:
         plt.title('Day vs Reviews count')
         plt.xlabel('Day')
         plt.ylabel('Reviews count')
-        plt.savefig('images/day_reviews_count.png')
+        plt.savefig('images/'+self.logger.key+'_day_reviews_count.png')
         plt.clf()
-
+        self.logger.create_output('day_reviews_count', 'images/' +
+                                  self.logger.key+'_day_reviews_count.png', 'day_reviews_count.png')
         self.logger.log(
             ">Plotting Sentiment Polarity distribution..", 'lightgreen')
         self.process_reviews['polarity'] = self.process_reviews['reviews'].map(
@@ -306,23 +317,29 @@ class SentimentAnalysis_Local:
             kind='hist',
             bins=50,
             title='Sentiment Polarity Distribution')
-        plt.savefig('images/polarity_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_polarity_distribution.png')
         plt.clf()
+        self.logger.create_output('polarity_distribution', 'images/'+self.logger.key +
+                                  '_polarity_distribution.png', 'polarity_distribution.png')
 
         self.logger.log('>Plotting Review Rating distribution..', 'lightgreen')
         self.process_reviews['overall'].plot(
             kind='hist',
             title='Review Rating Distribution')
-        plt.savefig('images/rating_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_rating_distribution.png')
         plt.clf()
+        self.logger.create_output('rating_distribution', 'images/'+self.logger.key +
+                                  '_rating_distribution.png', 'rating_distribution.png')
 
         self.logger.log('>Plotting Review length distribution..', 'lightgreen')
         self.process_reviews['review_len'].plot(
             kind='hist',
             bins=100,
             title='Review Text Length Distribution')
-        plt.savefig('images/review_len_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_review_len_distribution.png')
         plt.clf()
+        self.logger.create_output('review_len_distribution', 'images/'+self.logger.key +
+                                  '_review_len_distribution.png', 'review_len_distribution.png')
 
         self.logger.log(
             '>Plotting Review word count distribution..', 'lightgreen')
@@ -330,8 +347,11 @@ class SentimentAnalysis_Local:
             kind='hist',
             bins=100,
             title='Review Text Word Count Distribution')
-        plt.savefig('images/review_word_count_distribution.png')
+        plt.savefig('images/'+self.logger.key +
+                    '_review_word_count_distribution.png')
         plt.clf()
+        self.logger.create_output('review_word_count_distribution', 'images/'+self.logger.key +
+                                  '_review_word_count_distribution.png', 'review_word_count_distribution.png')
 
         # Filtering data
         review_pos = self.process_reviews[self.process_reviews["sentiment"]
@@ -405,8 +425,10 @@ class SentimentAnalysis_Local:
                                  paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
 
             # plot(fig, filename='word-plots', image='png')
-            fig.write_image("images/word_count_plots_" +
+            fig.write_image("images/"+self.logger.key+"_word_count_plots_" +
                             str(number_of_words)+".png")
+            self.logger.create_output('word_count_plots_'+str(number_of_words), 'images/'+self.logger.key +
+                                      '_word_count_plots_'+str(number_of_words)+'.png', 'word_count_plots_'+str(number_of_words)+'.png')
         self.logger.log('>Generating word count plots..', 'lightgreen')
         word_count(1)
         word_count(2)
@@ -425,7 +447,11 @@ class SentimentAnalysis_Local:
             plt.imshow(wordcloud, interpolation='bilinear')
             plt.axis('off')
             plt.tight_layout(pad=0)
-            plt.savefig('images/wordcloud_'+sentiment+'.png')
+            plt.savefig('images/'+self.logger.key +
+                        '_wordcloud_'+sentiment+'.png')
+            plt.clf()
+            self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
+                                      '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
         self.logger.log('>Generating word cloud plots..', 'lightgreen')
         plot_word_cloud('positive', review_pos['reviews'])
         plot_word_cloud('neutral', review_neu['reviews'])
@@ -662,6 +688,6 @@ class SentimentAnalysis_Local:
 
 
 if __name__ == "__main__":
-    new_obj = SentimentAnalysis_Musical('Musical_instruments_reviews.csv')
+    new_obj = SentimentAnalysis_Local('Musical_instruments_reviews.csv')
     print(new_obj.mass_predict_review_sentiment([
         'This is terrible i hate it dont buy this', "Truly grateful for this work of art."]))

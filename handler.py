@@ -1,6 +1,6 @@
 from reviews.reviews import ReviewScraper
 from sentiment_analysis import LiveSentimentAnalysis
-from sentiment_analysis import MusicalSentimentAnalysis
+from sentiment_analysis import LocalSentimentAnalysis
 import pandas as pd
 
 
@@ -25,7 +25,7 @@ def handler(data, logger_data):
     log_object = logger(logger_data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')
-        model = MusicalSentimentAnalysis.SentimentAnalysis_Musical(log_object)
+        model = LocalSentimentAnalysis.SentimentAnalysis_Local(log_object)
     else:
         log_object.log('Mode 2 chosen for Training', 'yellow')
         scraper = ReviewScraper(log_object)

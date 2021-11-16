@@ -17,6 +17,9 @@ class logger:
                                                                          'color': self.colors[color], 'error': error, 'end': end}})
         self.counter += 1
 
+    def close(self):
+        self.db.child("livedata").child(self.key).remove()
+
 
 def handler(data, logger_data):
     log_object = logger(logger_data)
@@ -54,9 +57,45 @@ def handler(data, logger_data):
         model = LiveSentimentAnalysis.SentimentAnalysis_Live(
             final_dataset, log_object)
 
-    # # Create test set
-    # if data['test']['mode'] == 1:
-    #     pass
-    # else:
-    #     # Create dataset, and run it against the model
-    #     pass
+    # Create test set
+    if data['test']['mode'] == 1:
+        log_object.log('Mode 1 chosen for Testing', 'yellow')
+        log_object.log('Creating test set', 'green')
+        test_set = pd.read_csv('Musical_instruments_reviews.csv')
+        test_set = test_set.dropna()
+
+        def sentiment_value(row):
+            '''This function returns sentiment value based on the overall ratings from the user'''
+            if row['overall'] == 3.0:
+                val = 'Neutral'
+            elif row['overall'] == 1.0 or row['overall'] == 2.0:
+                val = 'Negative'
+            elif row['overall'] == 4.0 or row['overall'] == 5.0:
+                val = 'Positive'
+            else:
+                val = -1
+            return val
+
+        # Applying the function in our new column
+        test_set['sentiment'] = test_set.apply(sentiment_value, axis=1)
+        y_actual = list(test_set['sentiment'])
+        test_set = test_set[['reviewText', 'summary']]
+        test_set['reviews'] = test_set['reviewText'] + \
+            ' ' + test_set['summary']
+        test_set = test_set.drop(['reviewText', 'summary'], axis=1)
+        test_set = list(test_set['reviews'])
+        log_object.log('Test set created', 'green')
+        log_object.log('Shape of test set: (' +
+                       str(len(test_set))+",1)", 'yellow')
+        log_object.log('Running test set on model..', 'green')
+        y_pred = model.mass_predict_review_sentiment(test_set)
+        accuracy = model.accuracy_score(y_actual, y_pred)
+        log_object.log('>Accuracy of model on test set: ' +
+                       str(accuracy), 'yellow')
+    else:
+        # Create dataset, and run it against the model
+        pass
+
+    log_object.log('All operations completed successfully. Exiting program..',
+                   'green', end=True)
+    log_object.close()

@@ -23,6 +23,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn import metrics
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import seaborn as sns
@@ -49,7 +50,7 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Musical:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, logger: list, file_path: str = 'Musical_instruments_reviews.csv'):
+    def __init__(self, logger: list, file_path: str = 'Patio_Lawn_and_Garden_5.csv'):
         # Initalizing the class with the file
         self.logger = logger
         self.logger.log("Reading dataset locally...")
@@ -566,9 +567,6 @@ class SentimentAnalysis_Musical:
         '''
         This function predicts the sentiment of the review
         '''
-        ##########################################
-        # Optimization is required for this code #
-        ##########################################
         label_encoder = preprocessing.LabelEncoder()
         self.process_reviews['sentiment'] = label_encoder.fit_transform(
             self.process_reviews['sentiment'])
@@ -609,10 +607,58 @@ class SentimentAnalysis_Musical:
         '''
         This function predicts the sentiment of the list of reviews by calling the predict_review_sentiment function
         '''
-        lst_of_predictions = []
-        for review in list_of_reviews:
-            lst_of_predictions.append(self.predict_review_sentiment(review))
-        return lst_of_predictions
+        # lst_of_predictions = []
+        # for review in list_of_reviews:
+        #     lst_of_predictions.append(self.predict_review_sentiment(review))
+        # return lst_of_predictions
+        self.logger.log(
+            '>Preprocessing test set (stemming and removal of stopwords)', 'lightgreen')
+        label_encoder = preprocessing.LabelEncoder()
+        self.process_reviews['sentiment'] = label_encoder.fit_transform(
+            self.process_reviews['sentiment'])
+        # Extracting 'reviews' for processing
+        review_features = self.process_reviews.copy()
+        review_features = review_features[['reviews']].reset_index(drop=True)
+        # Performing stemming on the review dataframe
+        ps = PorterStemmer()
+        global stop_words
+        # splitting and adding the stemmed words except stopwords
+        corpus = []
+        for i in range(0, len(review_features)):
+            reviewx = re.sub('[^a-zA-Z]', ' ', review_features['reviews'][i])
+            reviewx = reviewx.split()
+            reviewx = [ps.stem(word)
+                       for word in reviewx if not word in stop_words]
+            reviewx = ' '.join(reviewx)
+            corpus.append(reviewx)
+        self.logger.log('>Creating TF-IDF feature matrix', 'lightgreen')
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=2000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        # print(len(all_reviews))
+        all_reviews.extend(list_of_reviews)
+        # print(len(list_of_reviews))
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-(len(list_of_reviews))]
+        y = self.process_reviews['sentiment']
+        smol_X = All_X[-(len(list_of_reviews)):]
+        # print(smol_X.shape)
+        # print(All_X.shape)
+        self.logger.log(
+            '>Creating model with new TF-IDF feature matrix', 'lightgreen')
+        self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        y_pred = [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+        self.logger.log('>Prediction complete', 'lightgreen')
+        return y_pred
+
+    def accuracy_score(self, y_true, y_pred):
+        '''
+        This function calculates the accuracy of the model
+        '''
+        return accuracy_score(y_true, y_pred)
 
 
 if __name__ == "__main__":

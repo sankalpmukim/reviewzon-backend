@@ -366,13 +366,17 @@ class SentimentAnalysis_Live:
     def feature_extraction_experiment(self):
         '''
         This function is used to perform feature extraction experiment
-        ##################
-        ####  TODO  ######
-        ##################
+        This function is used to perform feature extraction experiment
+        1) Encodes sentiment into numbers
+        2) Stems the words of the reviews
+        3) Removes stop words and punctuations
+        4) Vectorizes words
+        5) Performs SMOTE to balance the data
+        6) Splits the data into training and testing sets
+        7) Performs Grid Search to find the best parameters and algorithm
+        8) Performs cross validation to find the best parameters and algorithm
+        9) plots confusion matrix
         '''
-        #################################################
-        # Figure out how to send results to the website #
-        #################################################
         # calling the label encoder function
         label_encoder = preprocessing.LabelEncoder()
 
@@ -539,6 +543,8 @@ class SentimentAnalysis_Live:
         # for review in list_of_reviews:
         #     lst_of_predictions.append(self.predict_review_sentiment(review))
         # return lst_of_predictions
+        self.logger.log(
+            '>Preprocessing test set (stemming and removal of stopwords', 'lightgreen')
         label_encoder = preprocessing.LabelEncoder()
         self.process_reviews['sentiment'] = label_encoder.fit_transform(
             self.process_reviews['sentiment'])
@@ -557,8 +563,9 @@ class SentimentAnalysis_Live:
                        for word in reviewx if not word in stop_words]
             reviewx = ' '.join(reviewx)
             corpus.append(reviewx)
+        self.logger.log('>Creating TF-IDF feature matrix', 'lightgreen')
         tfidf_vectorizer = TfidfVectorizer(
-            max_features=200, ngram_range=(2, 2))
+            max_features=2000, ngram_range=(2, 2))
         # TF-IDF feature matrix
         all_reviews = list(review_features['reviews'])
         # print(len(all_reviews))
@@ -570,10 +577,14 @@ class SentimentAnalysis_Live:
         smol_X = All_X[-(len(list_of_reviews)):]
         # print(smol_X.shape)
         # print(All_X.shape)
+        self.logger.log(
+            '>Creating model with new TF-IDF feature matrix', 'lightgreen')
         self.create_model(X, y)
 
         dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
-        return [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+        y_pred = [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+        self.logger.log('>Prediction complete', 'lightgreen')
+        return y_pred
 
 
 if __name__ == "__main__":

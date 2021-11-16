@@ -6,6 +6,7 @@ from handler import handler
 import pyrebase
 import json
 import random
+import time
 
 app = FastAPI()
 
@@ -26,6 +27,7 @@ db = firebase.database()
 
 @app.post("/")
 async def root(request: Request):
+    time.sleep(1)
     data = await request.json()
     livedata = db.child("livedata").get()
     key = random.randint(10000000, 99999999)

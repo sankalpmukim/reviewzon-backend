@@ -23,10 +23,16 @@ class ReviewScraper:
         cwd = os.curdir
         # print(cwd)
         # print(os.getcwd())
-        self.e = Extractor.from_yaml_file(
-            os.getcwd()+"\\reviews\selectors.yml")
-
-        self.fo = open(os.getcwd()+"\\config.json")
+        try:
+            self.e = Extractor.from_yaml_file(
+                os.getcwd()+"\\reviews\selectors.yml"
+            )
+            self.fo = open(os.getcwd()+"\\config.json")
+        except FileNotFoundError:
+            self.e = Extractor.from_yaml_file(
+                os.getcwd()+"/reviews/selectors.yml"
+            )
+            self.fo = open(os.getcwd()+"/config.json")
         self.API_KEYS = json.load(self.fo)["ScraperAPI"]
         self.count = 0
         self.collected_data = []
@@ -78,8 +84,6 @@ class ReviewScraper:
                     print(response_text[:25]+'...')
                     if data['next_page'] == None and self.flag:
                         if 'Timed out' not in response_text[:25]:
-                            if 'Request failed' in response_text[:25]:
-                                print(response_text)
                             self.flag = False
                             self.logger.log(
                                 ">No more pages! Stopping further download..", "red")

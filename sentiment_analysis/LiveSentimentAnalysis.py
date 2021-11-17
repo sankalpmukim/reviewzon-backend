@@ -29,6 +29,8 @@ from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
 import warnings
+import itertools
+from sklearn.metrics import accuracy_score
 
 warnings.filterwarnings('ignore')
 
@@ -63,7 +65,9 @@ class SentimentAnalysis_Live:
             "Commencing Data visualization tasks and image generation")
         self.data_visualization()
         self.logger.log("Data visualization complete...")
-        # self.feature_extraction_experiment()
+        self.logger.log("Commencing Model training experiments...")
+        self.feature_extraction_experiment()
+        self.logger.log("Model training experiments complete...")
 
     def preprocessing_data(self):
         '''
@@ -192,8 +196,10 @@ class SentimentAnalysis_Live:
         plt.title('Sentiment vs Helpfulness')
         plt.xlabel('Sentiment categories')
         plt.ylabel('helpful rate')
-        plt.savefig('images/sentiment_helpful_rate.png')
+        plt.savefig('images/'+self.logger.key+'_sentiment_helpful_rate.png')
         plt.clf()
+        self.logger.create_output(
+            'sentiment_helpful_rate', 'images/'+self.logger.key+'_sentiment_helpful_rate.png', 'sentiment_helpful_rate.png')
 
         self.logger.log('>Plotting Year vs Number of Reviews', 'lightgreen')
         self.process_reviews.groupby(['year', 'sentiment'])[
@@ -201,8 +207,10 @@ class SentimentAnalysis_Live:
         plt.title('Year and Sentiment count')
         plt.xlabel('Year')
         plt.ylabel('Sentiment count')
-        plt.savefig('images/year_sentiment_count.png')
+        plt.savefig('images/'+self.logger.key+'_year_sentiment_count.png')
         plt.clf()
+        self.logger.create_output('year_sentiment_count', 'images/'+self.logger.key +
+                                  '_year_sentiment_count.png', 'year_sentiment_count.png')
 
         # Creating a dataframe
         day = pd.DataFrame(self.process_reviews.groupby(
@@ -216,8 +224,10 @@ class SentimentAnalysis_Live:
         plt.title('Day vs Reviews count')
         plt.xlabel('Day')
         plt.ylabel('Reviews count')
-        plt.savefig('images/day_reviews_count.png')
+        plt.savefig('images/'+self.logger.key+'_day_reviews_count.png')
         plt.clf()
+        self.logger.create_output('day_reviews_count', 'images/' +
+                                  self.logger.key+'_day_reviews_count.png', 'day_reviews_count.png')
 
         self.process_reviews['polarity'] = self.process_reviews['reviews'].map(
             lambda text: TextBlob(text).sentiment.polarity)
@@ -233,8 +243,10 @@ class SentimentAnalysis_Live:
             kind='hist',
             bins=50,
             title='Sentiment Polarity Distribution')
-        plt.savefig('images/polarity_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_polarity_distribution.png')
         plt.clf()
+        self.logger.create_output('polarity_distribution', 'images/'+self.logger.key +
+                                  '_polarity_distribution.png', 'polarity_distribution.png')
 
         self.logger.log('>Plotting Rating Distribution', 'lightgreen')
         self.process_reviews['overall'] = pd.to_numeric(
@@ -242,24 +254,31 @@ class SentimentAnalysis_Live:
         self.process_reviews['overall'].plot(
             kind='hist',
             title='Review Rating Distribution')
-        plt.savefig('images/rating_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_rating_distribution.png')
         plt.clf()
+        self.logger.create_output('rating_distribution', 'images/'+self.logger.key +
+                                  '_rating_distribution.png', 'rating_distribution.png')
 
         self.logger.log('>Plotting Review Length Distribution', 'lightgreen')
         self.process_reviews['review_len'].plot(
             kind='hist',
             bins=100,
             title='Review Text Length Distribution')
-        plt.savefig('images/review_len_distribution.png')
+        plt.savefig('images/'+self.logger.key+'_review_len_distribution.png')
         plt.clf()
+        self.logger.create_output('review_len_distribution', 'images/'+self.logger.key +
+                                  '_review_len_distribution.png', 'review_len_distribution.png')
 
         self.logger.log('>Plotting Word Count Distribution', 'lightgreen')
         self.process_reviews['word_count'].plot(
             kind='hist',
             bins=100,
             title='Review Text Word Count Distribution')
-        plt.savefig('images/review_word_count_distribution.png')
+        plt.savefig('images/'+self.logger.key +
+                    '_review_word_count_distribution.png')
         plt.clf()
+        self.logger.create_output('review_word_count_distribution', 'images/'+self.logger.key +
+                                  '_review_word_count_distribution.png', 'review_word_count_distribution.png')
 
         # Filtering data
         print(self.process_reviews['sentiment'].value_counts())
@@ -337,8 +356,10 @@ class SentimentAnalysis_Live:
                                  paper_bgcolor='rgb(233,233,233)', title="Word Count Plots")
 
             # plot(fig, filename='word-plots', image='png')
-            fig.write_image("images/word_count_plots_" +
+            fig.write_image("images/"+self.logger.key+"_word_count_plots_" +
                             str(number_of_words)+".png")
+            self.logger.create_output('word_count_plots_'+str(number_of_words), 'images/'+self.logger.key +
+                                      '_word_count_plots_'+str(number_of_words)+'.png', 'word_count_plots_'+str(number_of_words)+'.png')
         self.logger.log('>Plotting Word Count Plots', 'lightgreen')
         word_count(1)
         word_count(2)
@@ -357,7 +378,11 @@ class SentimentAnalysis_Live:
             plt.imshow(wordcloud, interpolation='bilinear')
             plt.axis('off')
             plt.tight_layout(pad=0)
-            plt.savefig('images/wordcloud_'+sentiment+'.png')
+            plt.savefig('images/'+self.logger.key +
+                        '_wordcloud_'+sentiment+'.png')
+            plt.clf()
+            self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
+                                      '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
         self.logger.log('>Plotting Word Cloud', 'lightgreen')
         plot_word_cloud('positive', review_pos['reviews'])
         plot_word_cloud('neutral', review_neu['reviews'])
@@ -387,6 +412,7 @@ class SentimentAnalysis_Live:
         review_features = self.process_reviews.copy()
         review_features = review_features[['reviews']].reset_index(drop=True)
         # Performing stemming on the review dataframe
+        self.logger.log('>Performing stemming on the reviews', 'lightgreen')
         ps = PorterStemmer()
         global stop_words
         # splitting and adding the stemmed words except stopwords
@@ -401,16 +427,19 @@ class SentimentAnalysis_Live:
         tfidf_vectorizer = TfidfVectorizer(
             max_features=5000, ngram_range=(2, 2))
         # TF-IDF feature matrix
+        self.logger.log('>Performing TF-IDF on the reviews', 'lightgreen')
         X = tfidf_vectorizer.fit_transform(review_features['reviews'])
 
         # Getting the target variable(encoded)
         y = self.process_reviews['sentiment']
-        print(f'Original dataset shape : {Counter(y)}')
+        self.logger.log('>Performing SMOTE on the reviews', 'lightgreen')
+        self.logger.log(f'>>Original dataset shape: {Counter(y)}', 'yellow')
 
         smote = SMOTE(random_state=42)
         X_res, y_res = smote.fit_resample(X, y)
 
-        print(f'Resampled dataset shape {Counter(y_res)}')
+        self.logger.log(
+            f'>>Resampled dataset shape: {Counter(y_res)}', 'yellow')
 
         # Divide the dataset into Train and Test
         X_train, X_test, y_train, y_test = train_test_split(
@@ -418,40 +447,49 @@ class SentimentAnalysis_Live:
 
         print('Shape: ', X_train.shape, y_train.shape)
 
-        def plot_confusion_matrix(cm, classes,
-                                  normalize=False,
+        def plot_confusion_matrix(cm,
+                                  target_names,
                                   title='Confusion matrix',
-                                  cmap=plt.cm.Blues):
-            """
-            This function prints and plots the confusion matrix.
-            Normalization can be applied by setting `normalize=True`.
-            """
+                                  cmap=None,
+                                  normalize=True):
+            accuracy = np.trace(cm) / np.sum(cm).astype('float')
+            misclass = 1 - accuracy
 
+            if cmap is None:
+                cmap = plt.get_cmap('Blues')
+
+            plt.figure(figsize=(8, 6))
             plt.imshow(cm, interpolation='nearest', cmap=cmap)
             plt.title(title)
             plt.colorbar()
-            tick_marks = np.arange(len(classes))
-            plt.xticks(tick_marks, classes, rotation=45)
-            plt.yticks(tick_marks, classes)
+
+            if target_names is not None:
+                tick_marks = np.arange(len(target_names))
+                plt.xticks(tick_marks, target_names, rotation=45)
+                plt.yticks(tick_marks, target_names)
 
             if normalize:
                 cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-                print("Normalized confusion matrix")
-            else:
-                print('Confusion matrix, without normalization')
 
-            thresh = cm.max() / 2.
-            for i in range(cm.shape[0]):
-                for j in range(cm.shape[1]):
-                    plt.text(j, i, cm[i, j],
+            thresh = cm.max() / 1.5 if normalize else cm.max() / 2
+            for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+                if normalize:
+                    plt.text(j, i, "{:0.4f}".format(cm[i, j]),
+                             horizontalalignment="center",
+                             color="white" if cm[i, j] > thresh else "black")
+                else:
+                    plt.text(j, i, "{:,}".format(cm[i, j]),
                              horizontalalignment="center",
                              color="white" if cm[i, j] > thresh else "black")
 
             plt.tight_layout()
             plt.ylabel('True label')
-            plt.xlabel('Predicted label')
-            plt.savefig("images/confusion_matrix.jpg")
+            plt.xlabel('Predicted label\naccuracy={:0.4f}; misclass={:0.4f}'.format(
+                accuracy, misclass))
+            plt.savefig('images/'+self.logger.key + '_confusion_matrix.png')
             plt.clf()
+            self.logger.create_output(
+                'confusion_matrix', 'images/'+self.logger.key + '_confusion_matrix.png', 'confusion_matrix.png')
 
         # creating the objects
         logreg_cv = LogisticRegression(random_state=0)
@@ -459,31 +497,33 @@ class SentimentAnalysis_Live:
         knn_cv = KNeighborsClassifier()
         svc_cv = SVC()
         nb_cv = BernoulliNB()
+        self.logger.log('>Performing Grid Search on models', 'lightgreen')
         cv_dict = {0: 'Logistic Regression', 1: 'Decision Tree',
                    2: 'KNN', 3: 'SVC', 4: 'Naive Bayes'}
         cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
 
         for i, model in enumerate(cv_models):
-            print("{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
-                model, X, y, cv=10, scoring='accuracy').mean()))
-
+            self.logger.log(">>{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
+                model, X, y, cv=10, scoring='accuracy').mean()), 'yellow')
+        self.logger.log(
+            '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
         param_grid = {'C': np.logspace(-4, 4, 50),
                       'penalty': ['l1', 'l2']}
         clf = GridSearchCV(LogisticRegression(random_state=0),
                            param_grid, cv=5, verbose=0, n_jobs=-1)
         best_model = clf.fit(X_train, y_train)
         print(best_model.best_estimator_)
-        print("The mean accuracy of the model is:",
-              best_model.score(X_test, y_test))
+        self.logger.log(">>The mean accuracy of the model is: "+str(
+                        best_model.score(X_test, y_test)), 'lightgreen')
 
         logreg = LogisticRegression(C=10000.0, random_state=0)
         logreg.fit(X_train, y_train)
         y_pred = logreg.predict(X_test)
-        print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(
-            logreg.score(X_test, y_test)))
+        self.logger.log('>Accuracy of logistic regression classifier on test set: {:.2f}'.format(
+            logreg.score(X_test, y_test)), 'lightgreen')
 
         cm = metrics.confusion_matrix(y_test, y_pred)
-        plot_confusion_matrix(cm, classes=['Negative', 'Neutral', 'Positive'])
+        plot_confusion_matrix(cm, ['Negative', 'Neutral', 'Positive'])
 
     def create_model(self, X, y):
         '''
@@ -585,6 +625,12 @@ class SentimentAnalysis_Live:
         y_pred = [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
         self.logger.log('>Prediction complete', 'lightgreen')
         return y_pred
+
+    def accuracy_score(self, y_true, y_pred):
+        '''
+        This function calculates the accuracy of the model
+        '''
+        return accuracy_score(y_true, y_pred)
 
 
 if __name__ == "__main__":

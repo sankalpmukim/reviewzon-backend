@@ -83,7 +83,7 @@ class ReviewScraper:
                     print("***Response***")
                     print(response_text[:25]+'...')
                     if data['next_page'] == None and self.flag:
-                        if 'Timed out' not in response_text[:25]:
+                        if 'Timed out' not in response_text[:25] and 'Request failed' not in response_text[:25]:
                             self.flag = False
                             self.logger.log(
                                 ">No more pages! Stopping further download..", "red")

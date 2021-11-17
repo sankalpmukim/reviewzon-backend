@@ -42,10 +42,14 @@ class logger:
             {title: {'data': data, 'url': url, 'counter': self.output_counter}})
         self.output_counter += 1
 
+    def create_static(self, data):
+        self.db.child("output").child(self.key).child('static').update(data)
+
 
 def organizer(data, logger_data):
     time_1 = datetime.now()
     log_object = logger(logger_data)
+    log_object.create_static(data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')
         model = LocalSentimentAnalysis.SentimentAnalysis_Local(log_object)
@@ -76,6 +80,7 @@ def organizer(data, logger_data):
             log_object.log(
                 'Dataset too small. Please try again with more links', 'red')
             log_object.log('Exiting', 'red', end=True, error=True)
+            log_object.close()
             return
         model = LiveSentimentAnalysis.SentimentAnalysis_Live(
             final_dataset, log_object)

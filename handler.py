@@ -1,8 +1,10 @@
+from typing import final
 from reviews.reviews import ReviewScraper
 from sentiment_analysis import LiveSentimentAnalysis
 from sentiment_analysis import LocalSentimentAnalysis
 import pandas as pd
 import json
+import time
 from datetime import datetime
 import os
 
@@ -55,6 +57,7 @@ def organizer(data, logger_data):
         model = LocalSentimentAnalysis.SentimentAnalysis_Local(log_object)
     else:
         log_object.log('Mode 2 chosen for Training', 'yellow')
+        time.sleep(1)
         scraper = ReviewScraper(log_object)
         for i in range(len(data['train']['urls'])):
             log_object.log('Downloading reviews from url: ' +
@@ -122,7 +125,63 @@ def organizer(data, logger_data):
                        str(accuracy), 'yellow')
     else:
         # Create dataset, and run it against the model
-        pass
+        log_object.log('Mode 2 chosen for Testing', 'yellow')
+        scraper = ReviewScraper(log_object)
+        for i in range(len(data['test']['urls'])):
+            log_object.log('Downloading reviews from url: ' +
+                           data['test']['urls'][i], 'green')
+            if scraper.valid_state:
+                scraper.get_reviews(data['test']['urls'][i])
+            else:
+                # log_object.log('Invalid URL', 'red')
+                break
+        final_dataset = scraper.retrieve_data()
+        scraper.clear_data()
+        try:
+            final_dataset = pd.DataFrame(final_dataset)
+        except:
+            pass
+        log_object.log('Data downloaded', 'green')
+        try:
+            log_object.log('Shape of dataset: ' +
+                           str(final_dataset.shape), 'yellow')
+        except:
+            pass
+
+        log_object.log('Preprocessing test data..')
+        final_dataset = final_dataset.dropna()
+        final_dataset['content'] = final_dataset['content'].fillna(
+            'Missing')
+        final_dataset['reviews'] = final_dataset['content'] + \
+            final_dataset['title']
+        final_dataset = final_dataset.drop(['content', 'title'], axis=1)
+        final_dataset['rating'] = pd.to_numeric(
+            final_dataset['rating'])
+
+        def sentiment_value(row):
+            '''This function returns sentiment value based on the overall ratings from the user'''
+            if row['rating'] == 3.0:
+                val = 'Neutral'
+            elif row['rating'] == 1.0 or row['rating'] == 2.0:
+                val = 'Negative'
+            elif row['rating'] == 4.0 or row['rating'] == 5.0:
+                val = 'Positive'
+            else:
+                val = -1
+            return val
+
+        # Applying the function in our new column
+        final_dataset['sentiment'] = final_dataset.apply(
+            sentiment_value, axis=1)
+
+        y_actual = list(final_dataset['sentiment'])
+        test_set = final_dataset['reviews']
+        log_object.log('Test set created', 'green')
+        log_object.log('Running test set on model..', 'green')
+        y_pred = model.mass_predict_review_sentiment(test_set)
+        accuracy = model.accuracy_score(y_actual, y_pred)
+        log_object.log('>Accuracy of model on test set: ' +
+                       str(accuracy), 'yellow')
 
     log_object.log('All operations completed successfully. Exiting program..',
                    'green', end=True)
@@ -149,4 +208,5 @@ def organizer(data, logger_data):
     log_object.close()
 
     for filename in os.listdir('images/'):
-        os.remove('images/'+filename)
+        if log_object.key in filename:
+            os.remove('images/' + filename)

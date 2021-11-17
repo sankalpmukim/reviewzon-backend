@@ -3,6 +3,8 @@ from sentiment_analysis import LiveSentimentAnalysis
 from sentiment_analysis import LocalSentimentAnalysis
 import pandas as pd
 import json
+from datetime import datetime
+import os
 
 
 class logger:
@@ -42,6 +44,7 @@ class logger:
 
 
 def organizer(data, logger_data):
+    time_1 = datetime.now()
     log_object = logger(logger_data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')
@@ -118,4 +121,27 @@ def organizer(data, logger_data):
 
     log_object.log('All operations completed successfully. Exiting program..',
                    'green', end=True)
+    td = datetime.now() - time_1
+    # function to convert seconds into hours, minutes and seconds
+
+    def convert_seconds(seconds):
+        seconds = int(seconds)
+        hours = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60
+        hours, minutes, seconds = str(hours), str(minutes), str(seconds)
+        if len(hours) < 2:
+            hours = '0' + hours
+        if len(minutes) < 2:
+            minutes = '0' + minutes
+        if len(seconds) < 2:
+            seconds = '0' + seconds
+        return hours, minutes, seconds
+    td = convert_seconds(td.seconds)
+    log_object.log('Time taken: ' + td[0] +
+                   ':' + td[1] + ':' + td[2], 'yellow')
     log_object.close()
+
+    for filename in os.listdir('images/'):
+        os.remove('images/'+filename)

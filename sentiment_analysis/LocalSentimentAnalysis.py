@@ -67,11 +67,14 @@ class SentimentAnalysis_Local:
         self.preprocessing_data()
         self.logger.create_output("obtaining_data")
         self.logger.create_output("preprocessing_output")
-        dfi.export(self.process_reviews[:20],
-                   'images/'+self.logger.key+'_process_reviews.png')
+        try:
+            dfi.export(self.process_reviews[:20],
+                       'images/'+self.logger.key+'_process_reviews.png')
+            self.logger.create_output(
+                'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
+        except OSError:
+            pass
         self.logger.log("Preprocessing complete...")
-        self.logger.create_output(
-            'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
         self.logger.log("Shape of the dataset: {}".format(
             self.process_reviews.shape), "yellow")
         self.logger.log("Columns present in the dataset: {}".format(

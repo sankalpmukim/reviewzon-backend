@@ -438,28 +438,28 @@ class SentimentAnalysis_Local:
         word_count(2)
         word_count(3)
 
-        def plot_word_cloud(sentiment, text):
-            wordcloud = WordCloud(
-                width=3000,
-                height=2000,
-                background_color='black',
-                stopwords=STOPWORDS).generate(str(text))
-            fig = plt.figure(
-                figsize=(40, 30),
-                facecolor='k',
-                edgecolor='k')
-            plt.imshow(wordcloud, interpolation='bilinear')
-            plt.axis('off')
-            plt.tight_layout(pad=0)
-            plt.savefig('images/'+self.logger.key +
-                        '_wordcloud_'+sentiment+'.png')
-            plt.clf()
-            self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
-                                      '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
-        self.logger.log('>Generating word cloud plots..', 'lightgreen')
-        plot_word_cloud('positive', review_pos['reviews'])
-        plot_word_cloud('neutral', review_neu['reviews'])
-        plot_word_cloud('negative', review_neg['reviews'])
+        # def plot_word_cloud(sentiment, text):
+        #     wordcloud = WordCloud(
+        #         width=3000,
+        #         height=2000,
+        #         background_color='black',
+        #         stopwords=STOPWORDS).generate(str(text))
+        #     fig = plt.figure(
+        #         figsize=(40, 30),
+        #         facecolor='k',
+        #         edgecolor='k')
+        #     plt.imshow(wordcloud, interpolation='bilinear')
+        #     plt.axis('off')
+        #     plt.tight_layout(pad=0)
+        #     plt.savefig('images/'+self.logger.key +
+        #                 '_wordcloud_'+sentiment+'.png')
+        #     plt.clf()
+        #     self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
+        #                               '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
+        # self.logger.log('>Generating word cloud plots..', 'lightgreen')
+        # plot_word_cloud('positive', review_pos['reviews'])
+        # plot_word_cloud('neutral', review_neu['reviews'])
+        # plot_word_cloud('negative', review_neg['reviews'])
         self.logger.log('>Saved All plots locally', 'lightgreen')
 
     def feature_extraction_experiment(self):

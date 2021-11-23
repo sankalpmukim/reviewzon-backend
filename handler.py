@@ -10,6 +10,9 @@ import os
 
 
 class logger:
+    activator = True
+    output_activator = False
+
     def __init__(self, config: list):
         self.counter = config[0]
         self.db = config[1].database()
@@ -21,31 +24,36 @@ class logger:
         self.output_counter = 0
 
     def log(self, message, color='green', end=False, error=False):
-        self.db.child("livedata").child(self.key).update({self.counter: {'message': message,
-                                                                         'color': self.colors[color], 'error': error, 'end': end}})
-        self.counter += 1
+        if self.activator:
+            self.db.child("livedata").child(self.key).update({self.counter: {'message': message,
+                                                                             'color': self.colors[color], 'error': error, 'end': end}})
+            self.counter += 1
 
     def close(self):
-        self.db.child("livedata").child(self.key).remove()
+        if self.activator:
+            self.db.child("livedata").child(self.key).remove()
 
     def create_output(self, prompt, file_path=None, file_name=None):
-        try:
-            cloud_file_name = 'files/'+self.key+"/"+file_name
-        except TypeError:
-            pass
-        url = "None"
-        data = self.strings[prompt]['text']
-        title = self.strings[prompt]['title']
+        if self.activator and self.output_activator:
+            try:
+                cloud_file_name = 'files/'+self.key+"/"+file_name
+            except TypeError:
+                pass
+            url = "None"
+            data = self.strings[prompt]['text']
+            title = self.strings[prompt]['title']
 
-        if file_path is not None:
-            self.storage.child(cloud_file_name).put(file_path)
-            url = self.storage.child(cloud_file_name).get_url(None)
-        self.db.child("output").child(self.key).update(
-            {title: {'data': data, 'url': url, 'counter': self.output_counter}})
-        self.output_counter += 1
+            if file_path is not None:
+                self.storage.child(cloud_file_name).put(file_path)
+                url = self.storage.child(cloud_file_name).get_url(None)
+            self.db.child("output").child(self.key).update(
+                {title: {'data': data, 'url': url, 'counter': self.output_counter}})
+            self.output_counter += 1
 
     def create_static(self, data):
-        self.db.child("output").child(self.key).child('static').update(data)
+        if self.activator and self.output_activator:
+            self.db.child("output").child(
+                self.key).child('static').update(data)
 
 
 def organizer(data, logger_data):

@@ -578,7 +578,7 @@ class SentimentAnalysis_Local:
             '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
         param_grid = {'C': np.logspace(-4, 4, 25),
                       'penalty': ['l1', 'l2']}
-        clf = GridSearchCV(LogisticRegression(random_state=0),
+        clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
                            param_grid, cv=5, verbose=0, n_jobs=-1)
         best_model = clf.fit(X_train, y_train)
         print(best_model.best_estimator_)
@@ -598,7 +598,8 @@ class SentimentAnalysis_Local:
         '''
         This function creates a model using the training data
         '''
-        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel = LogisticRegression(
+            C=10000.0, random_state=0, max_iter=20000)
         self.mlmodel.fit(X, y)
 
     def predict_review_sentiment(self, review: str) -> str:

@@ -11,7 +11,7 @@ import os
 
 class logger:
     activator = True
-    output_activator = False
+    output_activator = True
 
     def __init__(self, config: list):
         self.counter = config[0]
@@ -101,6 +101,7 @@ def organizer(data, logger_data):
         log_object.log('Mode 1 chosen for Testing', 'yellow')
         log_object.log('Creating test set', 'green')
         test_set = pd.read_csv('Musical_instruments_reviews.csv')
+        test_set = test_set[:250]
         test_set = test_set.dropna()
 
         def sentiment_value(row):

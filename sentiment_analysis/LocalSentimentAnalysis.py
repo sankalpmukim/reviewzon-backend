@@ -2,17 +2,14 @@ from imblearn.over_sampling import SMOTE
 from collections import Counter
 from collections import defaultdict
 import cufflinks as cf
-from numpy.core.numeric import NaN
-from scipy import interp
 import pandas as pd
 import numpy as np
 import re
 import string
 import time
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import STOPWORDS
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -52,7 +49,7 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Local:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, logger, file_path: str = 'Patio_Lawn_and_Garden_5.csv'):
+    def __init__(self, logger, file_path: str = 'Automotive_5.csv'):
         # Initalizing the class with the file
         self.logger = logger
         self.logger.log("Reading dataset locally...")
@@ -625,7 +622,7 @@ class SentimentAnalysis_Local:
             reviewx = ' '.join(reviewx)
             corpus.append(reviewx)
         tfidf_vectorizer = TfidfVectorizer(
-            max_features=5000, ngram_range=(2, 2))
+            max_features=2000, ngram_range=(2, 2))
         # TF-IDF feature matrix
         all_reviews = list(review_features['reviews'])
         all_reviews.append(review)
@@ -634,10 +631,7 @@ class SentimentAnalysis_Local:
         X = All_X[:-1]
         y = self.process_reviews['sentiment']
         smol_X = All_X[-1]
-        try:
-            self.mlmodel
-        except AttributeError:
-            self.create_model(X, y)
+        self.create_model(X, y)
 
         dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
         return dict_of_deconstruct[self.mlmodel.predict(smol_X)[0]]
@@ -701,7 +695,57 @@ class SentimentAnalysis_Local:
         return accuracy_score(y_true, y_pred)
 
 
+class local_logger:
+    activator = True
+    output_activator = False
+    key = 'local'
+
+    def log(self, message, color='green', end=False, error=False):
+        print(message)
+
+    def close(self):
+        pass
+
+    def create_output(self, prompt, file_path=None, file_name=None):
+        print(prompt)
+
+    def create_static(self, data):
+        print(data)
+
+
 if __name__ == "__main__":
-    new_obj = SentimentAnalysis_Local('Musical_instruments_reviews.csv')
-    print(new_obj.mass_predict_review_sentiment([
-        'This is terrible i hate it dont buy this', "Truly grateful for this work of art."]))
+    datasets = ['Patio_Lawn_and_Garden_5.csv',
+                'Automotive_5.csv', 'Musical_instruments_reviews.csv']
+    logger = local_logger()
+    model = SentimentAnalysis_Local(logger, datasets[1])
+    test_set = pd.read_csv(datasets[2])
+    # test_set = test_set.sample(frac=0.1, random_state=8)
+    test_set = test_set[:250]
+    test_set = test_set.dropna()
+
+    def sentiment_value(row):
+        '''This function returns sentiment value based on the overall ratings from the user'''
+        if row['overall'] == 3.0:
+            val = 'Neutral'
+        elif row['overall'] == 1.0 or row['overall'] == 2.0:
+            val = 'Negative'
+        elif row['overall'] == 4.0 or row['overall'] == 5.0:
+            val = 'Positive'
+        else:
+            val = -1
+        return val
+
+    # Applying the function in our new column
+    test_set['sentiment'] = test_set.apply(sentiment_value, axis=1)
+    y_actual = list(test_set['sentiment'])
+    test_set = test_set[['reviewText', 'summary']]
+    test_set['reviews'] = test_set['reviewText'] + \
+        ' ' + test_set['summary']
+    test_set = test_set.drop(['reviewText', 'summary'], axis=1)
+    test_set = list(test_set['reviews'])
+    y_pred = model.mass_predict_review_sentiment(test_set)
+    accuracy = model.accuracy_score(y_actual, y_pred)
+    print('--------------', accuracy)
+    while True:
+        review = input('Enter a review: ')
+        print(model.predict_review_sentiment(review))

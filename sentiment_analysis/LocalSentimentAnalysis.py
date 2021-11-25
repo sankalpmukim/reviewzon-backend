@@ -52,7 +52,7 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Local:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, logger=None, file_path: str = 'Automotive_5.csv', origin='live', key: str = None):
+    def __init__(self, doExperiment: bool = False, logger=None, file_path: str = 'Automotive_5.csv', origin='live', key: str = None):
         if origin == 'live':
             # Initalizing the class with the file
             self.logger = logger
@@ -87,9 +87,10 @@ class SentimentAnalysis_Local:
                 "Commencing Data visualization tasks and image generation")
             self.data_visualization()
             self.logger.log("Data visualization complete...")
-            self.logger.log("Commencing Model training experiments...")
-            self.feature_extraction_experiment()
-            self.logger.log("Model training experiments complete...")
+            if doExperiment:
+                self.logger.log("Commencing Model training experiments...")
+                self.feature_extraction_experiment()
+                self.logger.log("Model training experiments complete...")
         else:
             with open('models/'+str(key)+'_review_features.pkl', 'rb') as file:
                 self.review_features = pickle.load(file)

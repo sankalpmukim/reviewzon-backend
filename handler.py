@@ -56,13 +56,14 @@ class logger:
                 self.key).child('static').update(data)
 
 
-def organizer(data, logger_data):
+def organizer(data, logger_data, doExperiment=False):
     time_1 = datetime.now()
     log_object = logger(logger_data)
     log_object.create_static(data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')
-        model = LocalSentimentAnalysis.SentimentAnalysis_Local(log_object)
+        model = LocalSentimentAnalysis.SentimentAnalysis_Local(
+            logger=log_object, doExperiment=doExperiment)
     else:
         log_object.log('Mode 2 chosen for Training', 'yellow')
         time.sleep(1)

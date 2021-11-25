@@ -40,7 +40,8 @@ async def root(request: Request):
         {1: {'color': '#00FF00', "message": "Initializing processes..", "error": False, "end": False}})
     count = 2
     logger = [count, firebase, key]
-    threadsplit = threading.Thread(target=organizer, args=(data, logger))
+    threadsplit = threading.Thread(
+        target=organizer, args=(data, logger, data['doExperiment']))
     threadsplit.start()
     return {"unique_id": key}
 

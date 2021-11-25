@@ -30,6 +30,7 @@ import plotly.graph_objs as go
 import warnings
 import dataframe_image as dfi
 import itertools
+import pickle
 
 warnings.filterwarnings('ignore')
 
@@ -49,43 +50,49 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 class SentimentAnalysis_Local:
     '''Provides a Class to handle all transactions and functions which deal with the Musical Instrument Dataset'''
 
-    def __init__(self, logger, file_path: str = 'Automotive_5.csv'):
-        # Initalizing the class with the file
-        self.logger = logger
-        self.logger.log("Reading dataset locally...")
-        self.raw_reviews = pd.read_csv(file_path)
-        time.sleep(1)
-        self.logger.log("Dataset read successfully")
-        self.logger.log("Shape of the dataset: {}".format(
-            self.raw_reviews.shape), "yellow")
-        self.logger.log("Columns present in the dataset: {}".format(
-            self.raw_reviews.columns), "yellow")
-        self.logger.log("Preprocessing dataset...")
-        self.preprocessing_data()
-        self.logger.create_output("obtaining_data")
-        self.logger.create_output("preprocessing_output")
-        try:
-            dfi.export(self.process_reviews[:20],
-                       'images/'+self.logger.key+'_process_reviews.png')
-            self.logger.create_output(
-                'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
-        except OSError:
-            pass
-        self.logger.log("Preprocessing complete...")
-        self.logger.log("Shape of the dataset: {}".format(
-            self.process_reviews.shape), "yellow")
-        self.logger.log("Columns present in the dataset: {}".format(
-            self.process_reviews.columns), "yellow")
-        self.process_reviews = self.process_reviews.drop(
-            ['reviewText', 'summary'], axis=1)
-        time.sleep(2)
-        self.logger.log(
-            "Commencing Data visualization tasks and image generation")
-        self.data_visualization()
-        self.logger.log("Data visualization complete...")
-        self.logger.log("Commencing Model training experiments...")
-        self.feature_extraction_experiment()
-        self.logger.log("Model training experiments complete...")
+    def __init__(self, logger=None, file_path: str = 'Automotive_5.csv', origin='live', key: str = None):
+        if origin == 'live':
+            # Initalizing the class with the file
+            self.logger = logger
+            self.logger.log("Reading dataset locally...")
+            self.raw_reviews = pd.read_csv(file_path)
+            time.sleep(1)
+            self.logger.log("Dataset read successfully")
+            self.logger.log("Shape of the dataset: {}".format(
+                self.raw_reviews.shape), "yellow")
+            self.logger.log("Columns present in the dataset: {}".format(
+                self.raw_reviews.columns), "yellow")
+            self.logger.log("Preprocessing dataset...")
+            self.preprocessing_data()
+            self.logger.create_output("obtaining_data")
+            self.logger.create_output("preprocessing_output")
+            try:
+                dfi.export(self.process_reviews[:20],
+                           'images/'+self.logger.key+'_process_reviews.png')
+                self.logger.create_output(
+                    'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
+            except OSError:
+                pass
+            self.logger.log("Preprocessing complete...")
+            self.logger.log("Shape of the dataset: {}".format(
+                self.process_reviews.shape), "yellow")
+            self.logger.log("Columns present in the dataset: {}".format(
+                self.process_reviews.columns), "yellow")
+            self.process_reviews = self.process_reviews.drop(
+                ['reviewText', 'summary'], axis=1)
+            time.sleep(2)
+            self.logger.log(
+                "Commencing Data visualization tasks and image generation")
+            self.data_visualization()
+            self.logger.log("Data visualization complete...")
+            self.logger.log("Commencing Model training experiments...")
+            self.feature_extraction_experiment()
+            self.logger.log("Model training experiments complete...")
+        else:
+            with open('models/'+str(key)+'_review_features.pkl', 'rb') as file:
+                self.review_features = pickle.load(file)
+            with open('models/'+str(key)+'_sentiment.pkl', 'rb') as file:
+                self.y = pickle.load(file)
 
     def preprocessing_data(self) -> None:
         '''
@@ -575,12 +582,13 @@ class SentimentAnalysis_Local:
             '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
         param_grid = {'C': np.logspace(-4, 4, 25),
                       'penalty': ['l1', 'l2']}
-        clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
-                           param_grid, cv=5, verbose=0, n_jobs=-1)
-        best_model = clf.fit(X_train, y_train)
-        print(best_model.best_estimator_)
-        self.logger.log(">>The mean accuracy of the model is: "+str(
-                        best_model.score(X_test, y_test)), 'lightgreen')
+
+        # clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
+        #    param_grid, cv=5, verbose=0, n_jobs=-1)
+        # best_model = clf.fit(X_train, y_train)
+        # print(best_model.best_estimator_)
+        # self.logger.log(">>The mean accuracy of the model is: "+str(
+        #                 best_model.score(X_test, y_test)), 'lightgreen')
 
         logreg = LogisticRegression(C=10000.0, random_state=0)
         logreg.fit(X_train, y_train)
@@ -664,6 +672,14 @@ class SentimentAnalysis_Local:
                        for word in reviewx if not word in stop_words]
             reviewx = ' '.join(reviewx)
             corpus.append(reviewx)
+        # --------------------------------------------------
+        self.logger.log('>Saving features for future processing')
+        # pickle a variable
+        pickle.dump(review_features, open(
+            'models/'+self.logger.key+'_review_features.pkl', 'wb'))
+        pickle.dump(self.process_reviews['sentiment'], open(
+            'models/'+self.logger.key+'_sentiment.pkl', 'wb'))
+        # --------------------------------------------------
         self.logger.log('>Creating TF-IDF feature matrix', 'lightgreen')
         tfidf_vectorizer = TfidfVectorizer(
             max_features=2000, ngram_range=(2, 2))
@@ -693,6 +709,36 @@ class SentimentAnalysis_Local:
         This function calculates the accuracy of the model
         '''
         return accuracy_score(y_true, y_pred)
+
+    def check_sentiment(self, list_of_reviews: list) -> str:
+        '''
+        This function checks the sentiment of the review in realtime (saveed model)
+        '''
+        # lst_of_predictions = []
+        # for review in list_of_reviews:
+        #     lst_of_predictions.append(self.predict_review_sentiment(review))
+        # return lst_of_predictions
+        review_features = self.review_features
+
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=2000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        # print(len(all_reviews))
+        all_reviews.extend(list_of_reviews)
+        # print(len(list_of_reviews))
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-(len(list_of_reviews))]
+        y = self.y
+        smol_X = All_X[-(len(list_of_reviews)):]
+        # print(smol_X.shape)
+        # print(All_X.shape)
+
+        self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        y_pred = [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+        return y_pred
 
 
 class local_logger:

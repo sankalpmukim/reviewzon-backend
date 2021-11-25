@@ -156,6 +156,11 @@ def organizer(data, logger_data):
                            str(final_dataset.shape), 'yellow')
         except:
             pass
+        if len(final_dataset) == 0:
+            log_object.log(
+                'Dataset too small. Please try again with more links', 'red')
+            log_object.log('Exiting', 'red', end=True, error=True)
+            log_object.close()
 
         log_object.log('Preprocessing test data..')
         final_dataset = final_dataset.dropna()

@@ -31,6 +31,7 @@ import plotly.graph_objs as go
 import warnings
 import itertools
 from sklearn.metrics import accuracy_score
+import pickle
 
 warnings.filterwarnings('ignore')
 
@@ -49,25 +50,31 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 
 class SentimentAnalysis_Live:
 
-    def __init__(self, data: pd.DataFrame, logger):
-        self.raw_reviews = data
-        self.logger = logger
-        self.logger.log("Columns present in the dataset: {}".format(
-            self.raw_reviews.columns), "yellow")
-        self.logger.log("Preprocessing dataset...")
-        self.preprocessing_data()
-        self.logger.log("Preprocessing complete...")
-        self.logger.log("Shape of the dataset: {}".format(
-            self.process_reviews.shape), "yellow")
-        self.logger.log("Columns present in the dataset: {}".format(
-            self.process_reviews.columns), "yellow")
-        self.logger.log(
-            "Commencing Data visualization tasks and image generation")
-        self.data_visualization()
-        self.logger.log("Data visualization complete...")
-        self.logger.log("Commencing Model training experiments...")
-        self.feature_extraction_experiment()
-        self.logger.log("Model training experiments complete...")
+    def __init__(self, data: pd.DataFrame = None, logger=None, origin='live', key: str = None):
+        if origin == 'live':
+            self.raw_reviews = data
+            self.logger = logger
+            self.logger.log("Columns present in the dataset: {}".format(
+                self.raw_reviews.columns), "yellow")
+            self.logger.log("Preprocessing dataset...")
+            self.preprocessing_data()
+            self.logger.log("Preprocessing complete...")
+            self.logger.log("Shape of the dataset: {}".format(
+                self.process_reviews.shape), "yellow")
+            self.logger.log("Columns present in the dataset: {}".format(
+                self.process_reviews.columns), "yellow")
+            self.logger.log(
+                "Commencing Data visualization tasks and image generation")
+            self.data_visualization()
+            self.logger.log("Data visualization complete...")
+            self.logger.log("Commencing Model training experiments...")
+            self.feature_extraction_experiment()
+            self.logger.log("Model training experiments complete...")
+        else:
+            with open('models/'+str(key)+'_review_features.pkl', 'rb') as file:
+                self.review_features = pickle.load(file)
+            with open('models/'+str(key)+'_sentiment.pkl', 'rb') as file:
+                self.y = pickle.load(file)
 
     def preprocessing_data(self):
         '''
@@ -603,6 +610,14 @@ class SentimentAnalysis_Live:
                        for word in reviewx if not word in stop_words]
             reviewx = ' '.join(reviewx)
             corpus.append(reviewx)
+        # --------------------------------------------------
+        self.logger.log('>Saving features for future processing')
+        # pickle a variable
+        pickle.dump(review_features, open(
+            'models/'+self.logger.key+'_review_features.pkl', 'wb'))
+        pickle.dump(self.process_reviews['sentiment'], open(
+            'models/'+self.logger.key+'_sentiment.pkl', 'wb'))
+        # --------------------------------------------------
         self.logger.log('>Creating TF-IDF feature matrix', 'lightgreen')
         tfidf_vectorizer = TfidfVectorizer(
             max_features=2000, ngram_range=(2, 2))
@@ -631,6 +646,39 @@ class SentimentAnalysis_Live:
         This function calculates the accuracy of the model
         '''
         return accuracy_score(y_true, y_pred)
+
+    def check_sentiment(self, list_of_reviews: list) -> str:
+        '''
+        This function checks the sentiment of the review
+        '''
+        '''
+        This function checks the sentiment of the review in realtime (saveed model)
+        '''
+        # lst_of_predictions = []
+        # for review in list_of_reviews:
+        #     lst_of_predictions.append(self.predict_review_sentiment(review))
+        # return lst_of_predictions
+        review_features = self.review_features
+
+        tfidf_vectorizer = TfidfVectorizer(
+            max_features=2000, ngram_range=(2, 2))
+        # TF-IDF feature matrix
+        all_reviews = list(review_features['reviews'])
+        # print(len(all_reviews))
+        all_reviews.extend(list_of_reviews)
+        # print(len(list_of_reviews))
+        All_X = tfidf_vectorizer.fit_transform(all_reviews)
+        X = All_X[:-(len(list_of_reviews))]
+        y = self.y
+        smol_X = All_X[-(len(list_of_reviews)):]
+        # print(smol_X.shape)
+        # print(All_X.shape)
+
+        self.create_model(X, y)
+
+        dict_of_deconstruct = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        y_pred = [dict_of_deconstruct[i] for i in self.mlmodel.predict(smol_X)]
+        return y_pred
 
 
 if __name__ == "__main__":

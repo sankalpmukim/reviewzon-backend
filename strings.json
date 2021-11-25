@@ -40,15 +40,15 @@
         "text": "This picture shows a small segment of the data that was used to test the ML model"
     },
     "word_count_plots_1" : {
-        "title": "Word Count Distribution Graph",
+        "title": "Word Count Distribution Graph 1",
         "text": "This picture shows a small segment of the data that was used to test the ML model"
     },
     "word_count_plots_2" : {
-        "title": "Word Count Distribution Graph",
+        "title": "Word Count Distribution Graph 2",
         "text": "This picture shows a small segment of the data that was used to test the ML model"
     },
     "word_count_plots_3" : {
-        "title": "Word Count Distribution Graph",
+        "title": "Word Count Distribution Graph 3",
         "text": "This picture shows a small segment of the data that was used to test the ML model"
     },
     "wordcloud_positive" : {

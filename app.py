@@ -7,6 +7,7 @@ import pyrebase
 import json
 import random
 import time
+from sentiment_analysis.LocalSentimentAnalysis import SentimentAnalysis_Local
 
 app = FastAPI()
 
@@ -27,7 +28,6 @@ db = firebase.database()
 
 @app.post("/")
 async def root(request: Request):
-    time.sleep(1)
     data = await request.json()
     livedata = db.child("livedata").get()
     key = random.randint(10000000, 99999999)
@@ -40,9 +40,22 @@ async def root(request: Request):
         {1: {'color': '#00FF00', "message": "Initializing processes..", "error": False, "end": False}})
     count = 2
     logger = [count, firebase, key]
-    threadsplit = threading.Thread(target=organizer, args=(data, logger))
+    threadsplit = threading.Thread(
+        target=organizer, args=(data, logger, data['doExperiment']))
     threadsplit.start()
     return {"unique_id": key}
+
+
+@app.post("/placeholder")
+async def root(request: Request):
+    data = await request.json()
+    # lsa = LocalSentimentAnalysis()
+    sentiment_lst = []
+    strings = data['text'].replace("check-sentiment ", "").split(",")
+    if data['data']['train']['mode'] == 1:
+        lsa = SentimentAnalysis_Local(origin='api', key=data['uniqueKey'])
+        sentiment_lst = str(lsa.check_sentiment(strings))
+    return {"color": "#00FF00", "message": sentiment_lst}
 
 if __name__ == '__main__':
     uvicorn.run(app='app:app', reload=True, debug=True)

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-data = pd.read_json('Patio_Lawn_and_Garden_5.json', lines=True)
+data = pd.read_json('Automotive_5.json', lines=True)
 print(data.head())
 print(data.info())
-data.to_csv('Patio_Lawn_and_Garden_5.csv', index=False)
+data.to_csv('Automotive_5.csv', index=False)

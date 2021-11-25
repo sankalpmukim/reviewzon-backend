@@ -10,6 +10,9 @@ import os
 
 
 class logger:
+    activator = True
+    output_activator = True
+
     def __init__(self, config: list):
         self.counter = config[0]
         self.db = config[1].database()
@@ -21,40 +24,46 @@ class logger:
         self.output_counter = 0
 
     def log(self, message, color='green', end=False, error=False):
-        self.db.child("livedata").child(self.key).update({self.counter: {'message': message,
-                                                                         'color': self.colors[color], 'error': error, 'end': end}})
-        self.counter += 1
+        if self.activator:
+            self.db.child("livedata").child(self.key).update({self.counter: {'message': message,
+                                                                             'color': self.colors[color], 'error': error, 'end': end}})
+            self.counter += 1
 
     def close(self):
-        self.db.child("livedata").child(self.key).remove()
+        if self.activator:
+            self.db.child("livedata").child(self.key).remove()
 
     def create_output(self, prompt, file_path=None, file_name=None):
-        try:
-            cloud_file_name = 'files/'+self.key+"/"+file_name
-        except TypeError:
-            pass
-        url = "None"
-        data = self.strings[prompt]['text']
-        title = self.strings[prompt]['title']
+        if self.activator and self.output_activator:
+            try:
+                cloud_file_name = 'files/'+self.key+"/"+file_name
+            except TypeError:
+                pass
+            url = "None"
+            data = self.strings[prompt]['text']
+            title = self.strings[prompt]['title']
 
-        if file_path is not None:
-            self.storage.child(cloud_file_name).put(file_path)
-            url = self.storage.child(cloud_file_name).get_url(None)
-        self.db.child("output").child(self.key).update(
-            {title: {'data': data, 'url': url, 'counter': self.output_counter}})
-        self.output_counter += 1
+            if file_path is not None:
+                self.storage.child(cloud_file_name).put(file_path)
+                url = self.storage.child(cloud_file_name).get_url(None)
+            self.db.child("output").child(self.key).update(
+                {title: {'data': data, 'url': url, 'counter': self.output_counter}})
+            self.output_counter += 1
 
     def create_static(self, data):
-        self.db.child("output").child(self.key).child('static').update(data)
+        if self.activator and self.output_activator:
+            self.db.child("output").child(
+                self.key).child('static').update(data)
 
 
-def organizer(data, logger_data):
+def organizer(data, logger_data, doExperiment=False):
     time_1 = datetime.now()
     log_object = logger(logger_data)
     log_object.create_static(data)
     if data['train']['mode'] == 1:
         log_object.log('Mode 1 chosen for Training', 'yellow')
-        model = LocalSentimentAnalysis.SentimentAnalysis_Local(log_object)
+        model = LocalSentimentAnalysis.SentimentAnalysis_Local(
+            logger=log_object, doExperiment=doExperiment)
     else:
         log_object.log('Mode 2 chosen for Training', 'yellow')
         time.sleep(1)
@@ -93,6 +102,7 @@ def organizer(data, logger_data):
         log_object.log('Mode 1 chosen for Testing', 'yellow')
         log_object.log('Creating test set', 'green')
         test_set = pd.read_csv('Musical_instruments_reviews.csv')
+        test_set = test_set[:250]
         test_set = test_set.dropna()
 
         def sentiment_value(row):
@@ -120,9 +130,16 @@ def organizer(data, logger_data):
                        str(len(test_set))+",1)", 'yellow')
         log_object.log('Running test set on model..', 'green')
         y_pred = model.mass_predict_review_sentiment(test_set)
-        accuracy = model.accuracy_score(y_actual, y_pred)
+        ret = model.accuracy_score(y_actual, y_pred)
         log_object.log('>Accuracy of model on test set: ' +
-                       str(accuracy), 'yellow')
+                       str(ret[0]), 'yellow')
+        log_object.log('>Precision of model on test set: ' +
+                       str(ret[1]), 'yellow')
+        log_object.log('>Recall of model on test set: ' +
+                       str(ret[2]), 'yellow')
+        log_object.log('>F1 of model on test set: ' +
+                       str(ret[3]), 'yellow')
+
     else:
         # Create dataset, and run it against the model
         log_object.log('Mode 2 chosen for Testing', 'yellow')
@@ -147,6 +164,11 @@ def organizer(data, logger_data):
                            str(final_dataset.shape), 'yellow')
         except:
             pass
+        if len(final_dataset) == 0:
+            log_object.log(
+                'Dataset too small. Please try again with more links', 'red')
+            log_object.log('Exiting', 'red', end=True, error=True)
+            log_object.close()
 
         log_object.log('Preprocessing test data..')
         final_dataset = final_dataset.dropna()
@@ -179,9 +201,15 @@ def organizer(data, logger_data):
         log_object.log('Test set created', 'green')
         log_object.log('Running test set on model..', 'green')
         y_pred = model.mass_predict_review_sentiment(test_set)
-        accuracy = model.accuracy_score(y_actual, y_pred)
+        ret = model.accuracy_score(y_actual, y_pred)
         log_object.log('>Accuracy of model on test set: ' +
-                       str(accuracy), 'yellow')
+                       str(ret[0]), 'yellow')
+        log_object.log('>Precision of model on test set: ' +
+                       str(ret[1]), 'yellow')
+        log_object.log('>Recall of model on test set: ' +
+                       str(ret[2]), 'yellow')
+        log_object.log('>F1 of model on test set: ' +
+                       str(ret[3]), 'yellow')
 
     log_object.log('All operations completed successfully. Exiting program..',
                    'green', end=True)

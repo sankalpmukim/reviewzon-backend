@@ -19,8 +19,8 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn import metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import seaborn as sns
@@ -31,6 +31,8 @@ import warnings
 import dataframe_image as dfi
 import itertools
 import pickle
+from sklearn.model_selection import KFold
+
 
 warnings.filterwarnings('ignore')
 
@@ -576,19 +578,28 @@ class SentimentAnalysis_Local:
         cv_models = [logreg_cv, dt_cv, knn_cv, nb_cv]
 
         for i, model in enumerate(cv_models):
-            self.logger.log(">>{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
-                model, X, y, cv=10, scoring='accuracy').mean()), 'yellow')
+            X_train_cv, X_test_cv, y_train_cv, y_test_cv = train_test_split(
+                X, y, test_size=0.15, random_state=0)
+            y_pred_cv = model.fit(X_train_cv, y_train_cv).predict(X_test_cv)
+            self.logger.log(
+                f'>>{cv_dict[i]} Accuracy = {accuracy_score(y_test_cv, y_pred_cv)}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} F1 Score = {f1_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} Recall = {recall_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} Precision = {precision_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
         self.logger.log(
             '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
         param_grid = {'C': np.logspace(-4, 4, 25),
                       'penalty': ['l1', 'l2']}
 
-        # clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
-        #    param_grid, cv=5, verbose=0, n_jobs=-1)
-        # best_model = clf.fit(X_train, y_train)
-        # print(best_model.best_estimator_)
-        # self.logger.log(">>The mean accuracy of the model is: "+str(
-        #                 best_model.score(X_test, y_test)), 'lightgreen')
+        clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
+                           param_grid, cv=5, verbose=0, n_jobs=-1)
+        best_model = clf.fit(X_train, y_train)
+        print(best_model.best_estimator_)
+        self.logger.log(">>The mean accuracy of the model is: "+str(
+                        best_model.score(X_test, y_test)), 'lightgreen')
 
         logreg = LogisticRegression(C=10000.0, random_state=0)
         logreg.fit(X_train, y_train)
@@ -708,7 +719,8 @@ class SentimentAnalysis_Local:
         '''
         This function calculates the accuracy of the model
         '''
-        return accuracy_score(y_true, y_pred)
+        return [accuracy_score(y_true, y_pred), precision_score(
+            y_true, y_pred, average="weighted"), recall_score(y_true, y_pred, average="weighted"), f1_score(y_true, y_pred, average="weighted")]
 
     def check_sentiment(self, list_of_reviews: list) -> str:
         '''

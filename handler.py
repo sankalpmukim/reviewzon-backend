@@ -129,9 +129,16 @@ def organizer(data, logger_data):
                        str(len(test_set))+",1)", 'yellow')
         log_object.log('Running test set on model..', 'green')
         y_pred = model.mass_predict_review_sentiment(test_set)
-        accuracy = model.accuracy_score(y_actual, y_pred)
+        ret = model.accuracy_score(y_actual, y_pred)
         log_object.log('>Accuracy of model on test set: ' +
-                       str(accuracy), 'yellow')
+                       str(ret[0]), 'yellow')
+        log_object.log('>Precision of model on test set: ' +
+                       str(ret[1]), 'yellow')
+        log_object.log('>Recall of model on test set: ' +
+                       str(ret[2]), 'yellow')
+        log_object.log('>F1 of model on test set: ' +
+                       str(ret[3]), 'yellow')
+
     else:
         # Create dataset, and run it against the model
         log_object.log('Mode 2 chosen for Testing', 'yellow')
@@ -193,9 +200,15 @@ def organizer(data, logger_data):
         log_object.log('Test set created', 'green')
         log_object.log('Running test set on model..', 'green')
         y_pred = model.mass_predict_review_sentiment(test_set)
-        accuracy = model.accuracy_score(y_actual, y_pred)
+        ret = model.accuracy_score(y_actual, y_pred)
         log_object.log('>Accuracy of model on test set: ' +
-                       str(accuracy), 'yellow')
+                       str(ret[0]), 'yellow')
+        log_object.log('>Precision of model on test set: ' +
+                       str(ret[1]), 'yellow')
+        log_object.log('>Recall of model on test set: ' +
+                       str(ret[2]), 'yellow')
+        log_object.log('>F1 of model on test set: ' +
+                       str(ret[3]), 'yellow')
 
     log_object.log('All operations completed successfully. Exiting program..',
                    'green', end=True)

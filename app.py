@@ -8,7 +8,7 @@ import json
 import random
 import time
 from sentiment_analysis.LocalSentimentAnalysis import SentimentAnalysis_Local
-
+from sentiment_analysis.LiveSentimentAnalysis import SentimentAnalysis_Live
 app = FastAPI()
 
 app.add_middleware(
@@ -46,7 +46,7 @@ async def root(request: Request):
     return {"unique_id": key}
 
 
-@app.post("/placeholder")
+@app.post("/checksentiment")
 async def root(request: Request):
     data = await request.json()
     # lsa = LocalSentimentAnalysis()
@@ -54,6 +54,9 @@ async def root(request: Request):
     strings = data['text'].replace("check-sentiment ", "").split(",")
     if data['data']['train']['mode'] == 1:
         lsa = SentimentAnalysis_Local(origin='api', key=data['uniqueKey'])
+        sentiment_lst = str(lsa.check_sentiment(strings))
+    else:
+        lsa = SentimentAnalysis_Live(origin='api', key=data['uniqueKey'])
         sentiment_lst = str(lsa.check_sentiment(strings))
     return {"color": "#00FF00", "message": sentiment_lst}
 

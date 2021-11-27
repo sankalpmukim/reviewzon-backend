@@ -30,6 +30,7 @@ from itertools import cycle
 import seaborn as sns
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve, auc
+from wordcloud import WordCloud
 from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
@@ -451,28 +452,28 @@ class SentimentAnalysis_Local:
         word_count(2)
         word_count(3)
 
-        # def plot_word_cloud(sentiment, text):
-        #     wordcloud = WordCloud(
-        #         width=3000,
-        #         height=2000,
-        #         background_color='black',
-        #         stopwords=STOPWORDS).generate(str(text))
-        #     fig = plt.figure(
-        #         figsize=(40, 30),
-        #         facecolor='k',
-        #         edgecolor='k')
-        #     plt.imshow(wordcloud, interpolation='bilinear')
-        #     plt.axis('off')
-        #     plt.tight_layout(pad=0)
-        #     plt.savefig('images/'+self.logger.key +
-        #                 '_wordcloud_'+sentiment+'.png')
-        #     plt.clf()
-        #     self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
-        #                               '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
-        # self.logger.log('>Generating word cloud plots..', 'lightgreen')
-        # plot_word_cloud('positive', review_pos['reviews'])
-        # plot_word_cloud('neutral', review_neu['reviews'])
-        # plot_word_cloud('negative', review_neg['reviews'])
+        def plot_word_cloud(sentiment, text):
+            wordcloud = WordCloud(
+                width=3000,
+                height=2000,
+                background_color='black',
+                stopwords=STOPWORDS).generate(str(text))
+            fig = plt.figure(
+                figsize=(40, 30),
+                facecolor='k',
+                edgecolor='k')
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis('off')
+            plt.tight_layout(pad=0)
+            plt.savefig('images/'+self.logger.key +
+                        '_wordcloud_'+sentiment+'.png')
+            plt.clf()
+            self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
+                                      '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
+        self.logger.log('>Generating word cloud plots..', 'lightgreen')
+        plot_word_cloud('positive', review_pos['reviews'])
+        plot_word_cloud('neutral', review_neu['reviews'])
+        plot_word_cloud('negative', review_neg['reviews'])
         self.logger.log('>Saved All plots locally', 'lightgreen')
 
     def feature_extraction_experiment(self):
@@ -601,12 +602,12 @@ class SentimentAnalysis_Local:
         param_grid = {'C': np.logspace(-4, 4, 25),
                       'penalty': ['l1', 'l2']}
 
-        # clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
-        #                    param_grid, cv=5, verbose=0, n_jobs=-1)
-        # best_model = clf.fit(X_train, y_train)
-        # print(best_model.best_estimator_)
-        # self.logger.log(">>The mean accuracy of the model is: "+str(
-        #                 best_model.score(X_test, y_test)), 'lightgreen')
+        clf = GridSearchCV(LogisticRegression(random_state=0, max_iter=20000),
+                           param_grid, cv=5, verbose=0, n_jobs=-1)
+        best_model = clf.fit(X_train, y_train)
+        print(best_model.best_estimator_)
+        self.logger.log(">>The mean accuracy of the model is: "+str(
+                        best_model.score(X_test, y_test)), 'lightgreen')
 
         logreg = LogisticRegression(C=10000.0, random_state=0)
         logreg.fit(X_train, y_train)

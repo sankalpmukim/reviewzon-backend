@@ -95,7 +95,7 @@ def organizer(data, logger_data, doExperiment=False):
             log_object.close()
             return
         model = LiveSentimentAnalysis.SentimentAnalysis_Live(
-            final_dataset, log_object)
+            final_dataset, log_object, doExperiment=doExperiment)
 
     # Create test set
     if data['test']['mode'] == 1:
@@ -235,6 +235,6 @@ def organizer(data, logger_data, doExperiment=False):
                    ':' + td[1] + ':' + td[2], 'yellow')
     log_object.close()
 
-    # for filename in os.listdir('images/'):
-    #     if log_object.key in filename:
-    #         os.remove('images/' + filename)
+    for filename in os.listdir('images/'):
+        if log_object.key in filename:
+            os.remove('images/' + filename)

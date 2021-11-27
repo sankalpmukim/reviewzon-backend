@@ -7,6 +7,7 @@ from scipy import interp
 import pandas as pd
 import numpy as np
 import re
+import time
 import string
 from wordcloud import WordCloud, STOPWORDS
 from nltk.stem.porter import PorterStemmer
@@ -21,10 +22,15 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn import metrics
-from sklearn.model_selection import cross_val_score
+from itertools import cycle
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import seaborn as sns
+import dataframe_image as dfi
 from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
@@ -49,8 +55,7 @@ stop_words = ['yourselves', 'between', 'whom', 'itself', 'is', "she's", 'up', 'h
 
 
 class SentimentAnalysis_Live:
-
-    def __init__(self, data: pd.DataFrame = None, logger=None, origin='live', key: str = None):
+    def __init__(self, data: pd.DataFrame = None, logger=None, origin='live', key: str = None, doExperiment=False):
         if origin == 'live':
             self.raw_reviews = data
             self.logger = logger
@@ -58,6 +63,13 @@ class SentimentAnalysis_Live:
                 self.raw_reviews.columns), "yellow")
             self.logger.log("Preprocessing dataset...")
             self.preprocessing_data()
+            try:
+                dfi.export(self.process_reviews[:20],
+                           'images/'+self.logger.key+'_process_reviews.png')
+                self.logger.create_output(
+                    'train_data_gist', 'images/'+self.logger.key+'_process_reviews.png', 'preprocessed_data.png')
+            except OSError:
+                pass
             self.logger.log("Preprocessing complete...")
             self.logger.log("Shape of the dataset: {}".format(
                 self.process_reviews.shape), "yellow")
@@ -67,9 +79,10 @@ class SentimentAnalysis_Live:
                 "Commencing Data visualization tasks and image generation")
             self.data_visualization()
             self.logger.log("Data visualization complete...")
-            self.logger.log("Commencing Model training experiments...")
-            self.feature_extraction_experiment()
-            self.logger.log("Model training experiments complete...")
+            if doExperiment:
+                self.logger.log("Commencing Model training experiments...")
+                self.feature_extraction_experiment()
+                self.logger.log("Model training experiments complete...")
         else:
             with open('models/'+str(key)+'_review_features.pkl', 'rb') as file:
                 self.review_features = pickle.load(file)
@@ -198,15 +211,15 @@ class SentimentAnalysis_Live:
         senti_help = senti_help[senti_help['helpful_rate'] != 0.00]
 
         # Plotting phase
-        self.logger.log('>Plotting Sentiment vs Helpful Rate', 'lightgreen')
-        sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
-        plt.title('Sentiment vs Helpfulness')
-        plt.xlabel('Sentiment categories')
-        plt.ylabel('helpful rate')
-        plt.savefig('images/'+self.logger.key+'_sentiment_helpful_rate.png')
-        plt.clf()
-        self.logger.create_output(
-            'sentiment_helpful_rate', 'images/'+self.logger.key+'_sentiment_helpful_rate.png', 'sentiment_helpful_rate.png')
+        # self.logger.log('>Plotting Sentiment vs Helpful Rate', 'lightgreen')
+        # sns.violinplot(x=senti_help["sentiment"], y=senti_help["helpful_rate"])
+        # plt.title('Sentiment vs Helpfulness')
+        # plt.xlabel('Sentiment categories')
+        # plt.ylabel('helpful rate')
+        # plt.savefig('images/'+self.logger.key+'_sentiment_helpful_rate.png')
+        # plt.clf()
+        # self.logger.create_output(
+        #     'sentiment_helpful_rate', 'images/'+self.logger.key+'_sentiment_helpful_rate.png', 'sentiment_helpful_rate.png')
 
         self.logger.log('>Plotting Year vs Number of Reviews', 'lightgreen')
         self.process_reviews.groupby(['year', 'sentiment'])[
@@ -327,8 +340,6 @@ class SentimentAnalysis_Live:
             fd_sorted = pd.DataFrame(
                 sorted(freq_dict.items(), key=lambda x: x[1])[::-1])
 
-            print(fd_sorted.info())
-            print(fd_sorted.head())
             fd_sorted.columns = ["word", "wordcount"]
             trace0 = horizontal_bar_chart(fd_sorted.head(25), 'green')
 
@@ -452,7 +463,7 @@ class SentimentAnalysis_Live:
         X_train, X_test, y_train, y_test = train_test_split(
             X_res, y_res, test_size=0.25, random_state=0)
 
-        print('Shape: ', X_train.shape, y_train.shape)
+        # print('Shape: ', X_train.shape, y_train.shape)
 
         def plot_confusion_matrix(cm,
                                   target_names,
@@ -510,14 +521,23 @@ class SentimentAnalysis_Live:
         cv_models = [logreg_cv, dt_cv, knn_cv, svc_cv, nb_cv]
 
         for i, model in enumerate(cv_models):
-            self.logger.log(">>{} Test Accuracy: {}".format(cv_dict[i], cross_val_score(
-                model, X, y, cv=10, scoring='accuracy').mean()), 'yellow')
+            X_train_cv, X_test_cv, y_train_cv, y_test_cv = train_test_split(
+                X, y, test_size=0.15, random_state=0)
+            y_pred_cv = model.fit(X_train_cv, y_train_cv).predict(X_test_cv)
+            self.logger.log(
+                f'>>{cv_dict[i]} Accuracy = {accuracy_score(y_test_cv, y_pred_cv)}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} F1 Score = {f1_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} Recall = {recall_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
+            self.logger.log(
+                f'>>{cv_dict[i]} Precision = {precision_score(y_test_cv, y_pred_cv, average="weighted")}', 'yellow')
         self.logger.log(
             '>Performing Grid Search on hyperparameters (Logistic Regression)', 'lightgreen')
         param_grid = {'C': np.logspace(-4, 4, 50),
                       'penalty': ['l1', 'l2']}
-        clf = GridSearchCV(LogisticRegression(random_state=0),
-                           param_grid, cv=5, verbose=0, n_jobs=-1)
+        clf = GridSearchCV(LogisticRegression(
+            random_state=0, max_iter=20000), param_grid, cv=5, verbose=0, n_jobs=-1)
         best_model = clf.fit(X_train, y_train)
         print(best_model.best_estimator_)
         self.logger.log(">>The mean accuracy of the model is: "+str(
@@ -532,11 +552,82 @@ class SentimentAnalysis_Live:
         cm = metrics.confusion_matrix(y_test, y_pred)
         plot_confusion_matrix(cm, ['Negative', 'Neutral', 'Positive'])
 
+        self.logger.log(">Plotting ROC curve")
+        y = label_binarize(y, classes=[0, 1, 2])
+        n_classes = y.shape[1]
+
+        # Train-Test split(80:20)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2,
+                                                            random_state=0)
+
+        # OneVsRestClassifier
+        classifier = OneVsRestClassifier(LogisticRegression(
+            C=10000, random_state=0, max_iter=20000))
+        y_score = classifier.fit(X_train, y_train).decision_function(X_test)
+
+        # Computing TPR and FPR
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        # Compute micro-average ROC curve and ROC area
+        fpr["micro"], tpr["micro"], _ = roc_curve(
+            y_test.ravel(), y_score.ravel())
+        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+        # aggregate all false positive rates
+        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+        # interpolate all ROC curves at this points
+        mean_tpr = np.zeros_like(all_fpr)
+        for i in range(n_classes):
+            mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+
+        # Finally average it and compute AUC
+        mean_tpr /= n_classes
+
+        fpr["macro"] = all_fpr
+        tpr["macro"] = mean_tpr
+        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+        # Plot all ROC curves
+        plt.figure()
+        plt.plot(fpr["micro"], tpr["micro"],
+                 label='micro-average ROC curve (area = {0:0.2f})'
+                 ''.format(roc_auc["micro"]),
+                 color='deeppink', linestyle=':', linewidth=4)
+
+        plt.plot(fpr["macro"], tpr["macro"],
+                 label='macro-average ROC curve (area = {0:0.2f})'
+                 ''.format(roc_auc["macro"]),
+                 color='navy', linestyle=':', linewidth=4)
+
+        colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
+        for i, color in zip(range(n_classes), colors):
+            plt.plot(fpr[i], tpr[i], color=color, lw=4,
+                     label='ROC curve of class {0} (area = {1:0.2f})'
+                     ''.format(i, roc_auc[i]))
+
+        plt.plot([0, 1], [0, 1], 'k--', lw=4)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic to multi-class')
+        plt.legend(loc="lower right")
+        plt.savefig('images/'+self.logger.key+'_ROC_curve.png')
+        self.logger.create_output(
+            'roc_curve', 'images/'+self.logger.key + '_ROC_curve.png', 'ROC_curve.png')
+
     def create_model(self, X, y):
         '''
         This function creates a model using the training data
         '''
-        self.mlmodel = LogisticRegression(C=10000.0, random_state=0)
+        self.mlmodel = LogisticRegression(
+            C=10000.0, random_state=0, max_iter=20000)
         self.mlmodel.fit(X, y)
 
     def predict_review_sentiment(self, review: str) -> str:
@@ -565,7 +656,7 @@ class SentimentAnalysis_Live:
             reviewx = ' '.join(reviewx)
             corpus.append(reviewx)
         tfidf_vectorizer = TfidfVectorizer(
-            max_features=200, ngram_range=(2, 2))
+            max_features=2000, ngram_range=(2, 2))
         # TF-IDF feature matrix
         all_reviews = list(review_features['reviews'])
         all_reviews.append(review)
@@ -645,7 +736,8 @@ class SentimentAnalysis_Live:
         '''
         This function calculates the accuracy of the model
         '''
-        return accuracy_score(y_true, y_pred)
+        return [accuracy_score(y_true, y_pred), precision_score(
+            y_true, y_pred, average="weighted"), recall_score(y_true, y_pred, average="weighted"), f1_score(y_true, y_pred, average="weighted")]
 
     def check_sentiment(self, list_of_reviews: list) -> str:
         '''

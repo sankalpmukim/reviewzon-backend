@@ -235,6 +235,6 @@ def organizer(data, logger_data, doExperiment=False):
                    ':' + td[1] + ':' + td[2], 'yellow')
     log_object.close()
 
-    for filename in os.listdir('images/'):
-        if log_object.key in filename:
-            os.remove('images/' + filename)
+    # for filename in os.listdir('images/'):
+    #     if log_object.key in filename:
+    #         os.remove('images/' + filename)

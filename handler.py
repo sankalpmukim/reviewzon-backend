@@ -95,7 +95,7 @@ def organizer(data, logger_data, doExperiment=False):
             log_object.close()
             return
         model = LiveSentimentAnalysis.SentimentAnalysis_Live(
-            final_dataset, log_object)
+            final_dataset, log_object, doExperiment=doExperiment)
 
     # Create test set
     if data['test']['mode'] == 1:

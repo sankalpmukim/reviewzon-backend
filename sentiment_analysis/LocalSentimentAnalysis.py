@@ -20,10 +20,17 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn import metrics
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn import svm
+from scipy import interp
+from itertools import cycle
 import seaborn as sns
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve, auc
+from wordcloud import WordCloud
 from textblob import TextBlob
 from plotly import tools
 import plotly.graph_objs as go
@@ -445,28 +452,28 @@ class SentimentAnalysis_Local:
         word_count(2)
         word_count(3)
 
-        # def plot_word_cloud(sentiment, text):
-        #     wordcloud = WordCloud(
-        #         width=3000,
-        #         height=2000,
-        #         background_color='black',
-        #         stopwords=STOPWORDS).generate(str(text))
-        #     fig = plt.figure(
-        #         figsize=(40, 30),
-        #         facecolor='k',
-        #         edgecolor='k')
-        #     plt.imshow(wordcloud, interpolation='bilinear')
-        #     plt.axis('off')
-        #     plt.tight_layout(pad=0)
-        #     plt.savefig('images/'+self.logger.key +
-        #                 '_wordcloud_'+sentiment+'.png')
-        #     plt.clf()
-        #     self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
-        #                               '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
-        # self.logger.log('>Generating word cloud plots..', 'lightgreen')
-        # plot_word_cloud('positive', review_pos['reviews'])
-        # plot_word_cloud('neutral', review_neu['reviews'])
-        # plot_word_cloud('negative', review_neg['reviews'])
+        def plot_word_cloud(sentiment, text):
+            wordcloud = WordCloud(
+                width=3000,
+                height=2000,
+                background_color='black',
+                stopwords=STOPWORDS).generate(str(text))
+            fig = plt.figure(
+                figsize=(40, 30),
+                facecolor='k',
+                edgecolor='k')
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis('off')
+            plt.tight_layout(pad=0)
+            plt.savefig('images/'+self.logger.key +
+                        '_wordcloud_'+sentiment+'.png')
+            plt.clf()
+            self.logger.create_output('wordcloud_'+sentiment, 'images/'+self.logger.key +
+                                      '_wordcloud_'+sentiment+'.png', 'wordcloud_'+sentiment+'.png')
+        self.logger.log('>Generating word cloud plots..', 'lightgreen')
+        plot_word_cloud('positive', review_pos['reviews'])
+        plot_word_cloud('neutral', review_neu['reviews'])
+        plot_word_cloud('negative', review_neg['reviews'])
         self.logger.log('>Saved All plots locally', 'lightgreen')
 
     def feature_extraction_experiment(self):
@@ -610,6 +617,77 @@ class SentimentAnalysis_Local:
 
         cm = metrics.confusion_matrix(y_test, y_pred)
         plot_confusion_matrix(cm, ['Negative', 'Neutral', 'Positive'])
+
+        # Binarizing the target feature
+        self.logger.log(">Plotting ROC curve")
+        y = label_binarize(y, classes=[0, 1, 2])
+        n_classes = y.shape[1]
+
+        # Train-Test split(80:20)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2,
+                                                            random_state=0)
+
+        # OneVsRestClassifier
+        classifier = OneVsRestClassifier(LogisticRegression(
+            C=10000, random_state=0, max_iter=20000))
+        y_score = classifier.fit(X_train, y_train).decision_function(X_test)
+
+        # Computing TPR and FPR
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        # Compute micro-average ROC curve and ROC area
+        fpr["micro"], tpr["micro"], _ = roc_curve(
+            y_test.ravel(), y_score.ravel())
+        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+        # aggregate all false positive rates
+        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+        # interpolate all ROC curves at this points
+        mean_tpr = np.zeros_like(all_fpr)
+        for i in range(n_classes):
+            mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+
+        # Finally average it and compute AUC
+        mean_tpr /= n_classes
+
+        fpr["macro"] = all_fpr
+        tpr["macro"] = mean_tpr
+        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+        # Plot all ROC curves
+        plt.figure()
+        plt.plot(fpr["micro"], tpr["micro"],
+                 label='micro-average ROC curve (area = {0:0.2f})'
+                 ''.format(roc_auc["micro"]),
+                 color='deeppink', linestyle=':', linewidth=4)
+
+        plt.plot(fpr["macro"], tpr["macro"],
+                 label='macro-average ROC curve (area = {0:0.2f})'
+                 ''.format(roc_auc["macro"]),
+                 color='navy', linestyle=':', linewidth=4)
+
+        colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
+        for i, color in zip(range(n_classes), colors):
+            plt.plot(fpr[i], tpr[i], color=color, lw=4,
+                     label='ROC curve of class {0} (area = {1:0.2f})'
+                     ''.format(i, roc_auc[i]))
+
+        plt.plot([0, 1], [0, 1], 'k--', lw=4)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic to multi-class')
+        plt.legend(loc="lower right")
+        plt.savefig('images/'+self.logger.key+'_ROC_curve.png')
+        self.logger.create_output(
+            'roc_curve', 'images/'+self.logger.key + '_ROC_curve.png', 'ROC_curve.png')
 
     def create_model(self, X, y):
         '''

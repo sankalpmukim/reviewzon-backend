@@ -67,6 +67,10 @@
         "title": "Confusion Matrix",
         "text": "This picture shows a small segment of the data that was used to test the ML model"
     },
+    "roc_curve" : {
+        "title": "ROC Curve",
+        "text": "This picture shows a small segment of the data that was used to test the ML model"
+    },
     "final_prediction_local" : {
         "title": "Final Prediction",
         "text": "This picture shows a small segment of the data that was used to test the ML model"

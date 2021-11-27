@@ -61,4 +61,4 @@ async def root(request: Request):
     return {"color": "#00FF00", "message": sentiment_lst}
 
 if __name__ == '__main__':
-    uvicorn.run(app='app:app', reload=True, debug=True)
+    uvicorn.run(app='app:app')
